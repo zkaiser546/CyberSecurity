@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feedback System</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
@@ -179,7 +178,7 @@
 
     feedbackBtn.addEventListener("click", () => {
       contentArea.innerHTML = `
-        <div class="content-card p-8">
+         <div class="content-card p-8">
           <h2 class="text-3xl font-bold text-white mb-4">Create Feedback</h2>
           <div class="mb-6">
             <p class="text-sm font-medium text-gray-300 mb-2">Rate your experience</p>
@@ -195,7 +194,26 @@
             <label for="feedback" class="block text-sm font-medium text-gray-300">Your Feedback</label>
             <textarea id="feedback" rows="4" class="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
-          <button class="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">Submit Feedback</button>
+
+
+          <div class="mb-6">
+             <div class="bg-gray-800 text-gray-300 p-4 rounded-lg mb-4">
+             <p><strong>Note:</strong> Your name will be visible to the admin. If you prefer to remain anonymous, please check the box below.</p>
+         </div>
+         <div class="flex items-center">
+            <input type="checkbox" id="anonymous" class="mr-2 w-4 h-4">
+            <label for="anonymous" class="text-gray-300">Submit as anonymous</label>
+         </div>
+        </div>
+
+        
+        <!--ta diri gd ka if i click ni niya ang makita sa admin na nag feedback na name kay same sa gach example    (k***T. ****)--->
+ 
+
+
+
+
+          <button id="submit-feedback" class="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">Submit Feedback</button>
         </div>
       `;
 
@@ -296,7 +314,7 @@
     });
 
     logoutBtn.addEventListener("click", () => {
-      window.location.href = "login.php";
+      window.location.href = "login.html";
     });
   </script>
 </body>
