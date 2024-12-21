@@ -207,7 +207,7 @@
         </div>
 
         
-        <!--ta diri gd ka if i click ni niya ang makita sa admin na nag feedback na name kay same sa gach example    (k***T. ****)--->
+        <!--tan diri gd ka if i click ni niya ang makita sa admin na nag feedback na name kay same sa gcash example    (k***T. ****)--->
  
 
 
