@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
@@ -30,7 +30,7 @@
 
   <div class="glass w-full max-w-md p-8">
     <h1 class="text-3xl font-bold text-white mb-6 text-center uppercase">Welcome Back</h1>
-    <form action="authenticate_user.php" method="POST">
+    <form id="login-form">
       <!-- Email -->
       <div class="mb-6">
         <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
@@ -52,10 +52,41 @@
     <!-- Sign-Up Redirect -->
     <div class="mt-6 text-center">
       <p class="text-gray-400">Don't have an account? 
-        <a href="signup.php" class="text-blue-400 hover:underline">Sign Up</a>
+        <a href="signup.html" class="text-blue-400 hover:underline">Sign Up</a>
       </p>
     </div>
   </div>
 
+  <script>
+    document.getElementById("login-form").addEventListener("submit", function(event) {
+      event.preventDefault(); // Prevent form submission
+
+      // Mock validation
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if (email === "admin@example.com" && password === "123456") {
+        // SweetAlert2 Success Alert
+        Swal.fire({
+          icon: "success",
+          title: "Login Successful",
+          text: "Redirecting to the dashboard...",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        }).then(() => {
+          window.location.href = "dashboard.html"; // Redirect to the dashboard page
+        });
+      } else {
+        // SweetAlert2 Error Alert
+        Swal.fire({
+          icon: "error",
+          title: "Invalid Credentials",
+          text: "Please check your email and password!",
+          showConfirmButton: true,
+        });
+      }
+    });
+  </script>
 </body>
 </html>
