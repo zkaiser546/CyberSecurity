@@ -6,6 +6,7 @@
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
@@ -52,7 +53,7 @@
     <!-- Sign-Up Redirect -->
     <div class="mt-6 text-center">
       <p class="text-gray-400">Don't have an account? 
-        <a href="signup.html" class="text-blue-400 hover:underline">Sign Up</a>
+        <a href="signup.php" class="text-blue-400 hover:underline">Sign Up</a>
       </p>
     </div>
   </div>

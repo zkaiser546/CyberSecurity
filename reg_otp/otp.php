@@ -82,6 +82,8 @@
       const remainingTime = getRemainingTime();
       if (remainingTime > 0) {
         startCountdown(Math.ceil(remainingTime / 60), true);
+      } else {
+        sendOtp(); // Send OTP if not yet generated
       }
     };
 
@@ -89,43 +91,88 @@
     submitOtpBtn.addEventListener("click", () => {
       const otpValue = otpInput.value.trim();
 
-      if (otpValue === "123456") {
-        Swal.fire({
-          icon: "success",
-          title: "OTP Verified",
-          text: "Redirecting to the dashboard...",
-          timer: 2000,
-          timerProgressBar: true,
-          showConfirmButton: false,
-        }).then(() => {
-          localStorage.removeItem(TIMER_KEY); // Clear timer on success
-          window.location.href = "admin_dashboard.html"; // Redirect to dashboard
-        });
-      } else {
+      if (otpValue === "") {
         Swal.fire({
           icon: "error",
-          title: "Invalid OTP",
-          text: "Please try again!",
-          showConfirmButton: true,
+          title: "Empty OTP",
+          text: "Please enter the OTP!",
         });
+        return;
       }
+
+      // Send OTP validation request to the backend
+      fetch("validate_otp.php", {
+        method: "POST",
+        body: JSON.stringify({ otp: otpValue }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success") {
+            Swal.fire({
+              icon: "success",
+              title: "OTP Verified",
+              text: "Redirecting to the dashboard...",
+              timer: 2000,
+              timerProgressBar: true,
+              showConfirmButton: false,
+            }).then(() => {
+              localStorage.removeItem(TIMER_KEY); // Clear timer on success
+              window.location.href = "admin_dashboard.html"; // Redirect to dashboard
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Invalid OTP",
+              text: "Please try again!",
+              showConfirmButton: true,
+            });
+          }
+        })
+        .catch((error) => console.error("Error validating OTP:", error));
     });
 
     // Resend OTP and Start Timer
     timerElement.addEventListener("click", () => {
       if (timerElement.classList.contains("timer-disabled")) return;
 
-      Swal.fire({
-        icon: "info",
-        title: "OTP Resent",
-        text: "A new OTP has been sent to your email!",
-        timer: 2000,
-        timerProgressBar: true,
-        showConfirmButton: false,
-      });
+      sendOtp(); // Resend OTP
 
       startCountdown(5); // Start 5-minute countdown
     });
+
+    // Function to send OTP
+    function sendOtp() {
+      fetch("send_otp.php", {
+        method: "POST",
+        body: JSON.stringify({ email: "user@example.com" }), // Replace with actual email
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success") {
+            Swal.fire({
+              icon: "info",
+              title: "OTP Resent",
+              text: "A new OTP has been sent to your email!",
+              timer: 2000,
+              timerProgressBar: true,
+              showConfirmButton: false,
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Error Resending OTP",
+              text: "Please try again later.",
+            });
+          }
+        })
+        .catch((error) => console.error("Error sending OTP:", error));
+    }
 
     // Countdown Timer
     function startCountdown(minutes, fromReload = false) {
@@ -173,4 +220,3 @@
   </script>
 </body>
 </html>
-
