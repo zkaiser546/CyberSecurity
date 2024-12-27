@@ -6,7 +6,6 @@
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
@@ -31,7 +30,7 @@
 
   <div class="glass w-full max-w-md p-8">
     <h1 class="text-3xl font-bold text-white mb-6 text-center uppercase">Welcome Back</h1>
-    <form id="login-form">
+    <form id="login-form" method="POST" action="users_login.php">
       <!-- Email -->
       <div class="mb-6">
         <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
@@ -58,36 +57,62 @@
     </div>
   </div>
 
-  <script>
-    document.getElementById("login-form").addEventListener("submit", function(event) {
-      event.preventDefault(); // Prevent form submission
+ <!--<script>
+  document.getElementById("login-form").addEventListener("submit", function(event) {
+    event.preventDefault(); // Prevent form submission
 
-      // Mock validation
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+    // Get email and password values
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-      if (email === "admin@example.com" && password === "123456") {
-        // SweetAlert2 Success Alert
-        Swal.fire({
-          icon: "success",
-          title: "Login Successful",
-          text: "Redirecting to the dashboard...",
-          timer: 2000,
-          timerProgressBar: true,
-          showConfirmButton: false,
-        }).then(() => {
-          window.location.href = "dashboard.html"; // Redirect to the dashboard page
-        });
+    // Send AJAX request to the server
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "user_login.php", true); // Change to the PHP script handling login
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    // Prepare data to send to the server
+    const data = `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        const response = JSON.parse(xhr.responseText); // Parse the JSON response
+
+        if (response.success) {
+          // SweetAlert2 Success Alert
+          Swal.fire({
+            icon: "success",
+            title: "Login Successful",
+            text: "Redirecting to the dashboard...",
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+          }).then(() => {
+            window.location.href = response.redirectUrl; // Redirect based on server's response
+          });
+        } else {
+          // SweetAlert2 Error Alert
+          Swal.fire({
+            icon: "error",
+            title: "Invalid Credentials",
+            text: response.message, // Show error message returned by the server
+            showConfirmButton: true,
+          });
+        }
       } else {
-        // SweetAlert2 Error Alert
+        // Handle error from the server
         Swal.fire({
           icon: "error",
-          title: "Invalid Credentials",
-          text: "Please check your email and password!",
+          title: "Server Error",
+          text: "There was an error processing your request. Please try again later.",
           showConfirmButton: true,
         });
       }
-    });
-  </script>
+    };
+
+    // Send the request
+    xhr.send(data);
+  });
+</script> -->
+
 </body>
 </html>

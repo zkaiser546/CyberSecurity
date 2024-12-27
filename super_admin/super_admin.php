@@ -1,3 +1,12 @@
+<?php
+session_start();
+session_unset(); // Unset all session variables
+session_destroy();
+include '../database/dbConnect.php';
+$sql = "SELECT SpAd_ID, Firstname, Lastname, Email, Password, Image, Status, Role FROM SupAdmin ";
+$result = $conn->query($sql);
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -165,7 +174,7 @@
 
       // Logout Functionality
       document.getElementById("logout-btn").addEventListener("click", () => {
-        window.location.href = "login.html";
+        window.location.href = "../login.php";
       });
 
       // Manage Users Tab
