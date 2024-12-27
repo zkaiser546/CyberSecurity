@@ -3,6 +3,9 @@ require './vendor/autoload.php';
 // Include database connection
 include '../CyberSecurity/database/dbConnect.php';
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -15,12 +18,12 @@ session_start();
 // Validation functions
 function validateUsername($username)
 {
-  return preg_match('/^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,}$/', $username);
+    return preg_match('/^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,}$/', $username);
 }
 
 function validateEmail($email)
 {
-  return filter_var($email, FILTER_VALIDATE_EMAIL);
+    return filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
 // Initialize variables
@@ -28,108 +31,111 @@ $username = '';
 $email = '';
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sign-up'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
   $username = trim($_POST['username']);
   $email = trim($_POST['email']);
   $password = $_POST['password'];
   $confirm_password = $_POST['confirm_password'];
 
-  // Check if all fields are filled
+  // Same validation logic as before...
   if (!empty($username) && !empty($email) && !empty($password) && !empty($confirm_password)) {
-    if (validateUsername($username)) {
-      if (validateEmail($email)) {
-        if ($password === $confirm_password) {
-          if (
-            strlen($password) >= 8 &&
-            preg_match('/[A-Z]/', $password) &&
-            preg_match('/[a-z]/', $password) &&
-            preg_match('/\d/', $password) &&
-            preg_match('/[\W_]/', $password)
-          ) {
-            // Check if email or username already exists
-            $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?");
-            $stmt->bind_param("ss", $email, $username);
-            $stmt->execute();
-            $stmt->bind_result($count);
-            $stmt->fetch();
-            $stmt->close();
+      if (validateUsername($username)) {
+          if (validateEmail($email)) {
+              if ($password === $confirm_password) {
+                  if (
+                      strlen($password) >= 8 &&
+                      preg_match('/[A-Z]/', $password) &&
+                      preg_match('/[a-z]/', $password) &&
+                      preg_match('/\d/', $password) &&
+                      preg_match('/[\W_]/', $password)
+                  ) {
+                      // Check if email or username already exists
+                      $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?");
+                      $stmt->bind_param("ss", $email, $username);
+                      $stmt->execute();
+                      $stmt->bind_result($count);
+                      $stmt->fetch();
+                      $stmt->close();
 
-            if ($count == 0) {
-              // Generate verification code
-              $verification_code = rand(100000, 999999);
+                      if ($count == 0) {
+                          // Generate verification code
+                          $verification_code = rand(100000, 999999);
 
-              // Store verification code in OTP table
-              $stmt = $conn->prepare("INSERT INTO password_resets (email, code, created_at) VALUES (?, ?, NOW())");
-              $stmt->bind_param("ss", $email, $verification_code);
+                          // Store verification code in OTP table
+                          $stmt = $conn->prepare("INSERT INTO password_resets (email, code, created_at) VALUES (?, ?, NOW())");
+                          $stmt->bind_param("ss", $email, $verification_code);
 
-              if ($stmt->execute()) {
-                $stmt->close();
+                          if ($stmt->execute()) {
+                              $stmt->close();
 
-                // Send verification email
-                $mail = new PHPMailer(true);
-                try {
-                  $mail->isSMTP();
-                  $mail->Host = 'smtp.gmail.com';
-                  $mail->SMTPAuth = true;
-                  $mail->Username = 'howardclintforwork@gmail.com';
-                  $mail->Password = 'helloworld12345';
-                  $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                  $mail->Port = 587;
+                              // Send verification email
+                              $mail = new PHPMailer(true);
+                              try {
+                                  $mail->isSMTP();
+                                  $mail->Host = 'smtp.gmail.com';
+                                  $mail->SMTPAuth = true;
+                                  $mail->Username = 'howardclintforwork@gmail.com';
+                                  $mail->Password = 'ubek rjec dmwv tdje';
+                                  $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                                  $mail->Port = 587;
 
-                  $mail->setFrom('no-reply@yourdomain.com', 'Your Website Name');
-                  $mail->addAddress($email);
-                  $mail->isHTML(true);
-                  $mail->Subject = 'Email Verification Code';
-                  $mail->Body = 'Your verification code is: <b>' . $verification_code . '</b>';
-                  $mail->send();
+                                  $mail->setFrom('no-reply@yourdomain.com', '');
+                                  $mail->addAddress($email);
+                                  $mail->isHTML(true);
+                                  $mail->Subject = 'Email Verification Code';
+                                  $mail->Body = 'Your verification code is: <b>' . $verification_code . '</b>';
+                                  $mail->send();
 
-                  // Store session data
-                  $_SESSION['email'] = $email;
-                  $_SESSION['username'] = $username;
-                  $_SESSION['password'] = password_hash($password, PASSWORD_BCRYPT);
-                } catch (Exception $e) {
-                  $error = "Failed to send verification code. Please try again.";
-                }
+                                  echo json_encode(['success' => true, 'message' => 'Verification email sent successfully!']);
+                                  exit;
+                              } catch (Exception $e) {
+                                  echo json_encode(['success' => false, 'message' => 'Failed to send verification email.']);
+                                  exit;
+                              }
+                          } else {
+                              echo json_encode(['success' => false, 'message' => 'Failed to process your request.']);
+                              exit;
+                          }
+                      } else {
+                          echo json_encode(['success' => false, 'message' => 'Email or username already exists.']);
+                          exit;
+                      }
+                  } else {
+                      echo json_encode(['success' => false, 'message' => 'Password must meet complexity requirements.']);
+                      exit;
+                  }
               } else {
-                $error = 'Failed to process your request. Please try again.';
+                  echo json_encode(['success' => false, 'message' => 'Passwords do not match.']);
+                  exit;
               }
-            } else {
-              $error = 'Email or username already exists.';
-            }
           } else {
-            $error = 'Password must meet complexity requirements.';
+              echo json_encode(['success' => false, 'message' => 'Invalid email format.']);
+              exit;
           }
-        } else {
-          $error = 'Passwords do not match.';
-        }
       } else {
-        $error = 'Invalid email format.';
+          echo json_encode(['success' => false, 'message' => 'Invalid username format.']);
+          exit;
       }
-    } else {
-      $error = 'Invalid username format.';
-    }
   } else {
-    $error = 'All fields are required.';
-  }
-
-  // Show error message with custom SweetAlert
-  if (!empty($error)) {
-    echo "<script>
-            Swal.fire({
-              title: 'Error!',
-              text: '" . addslashes($error) . "',
-              icon: 'error',
-              confirmButtonText: 'Try Again',
-              background: '#2a2f3b',
-              color: '#ffffff',
-              confirmButtonColor: '#4a90e2',
-              showConfirmButton: true
-            });
-        </script>";
+      echo json_encode(['success' => false, 'message' => 'All fields are required.']);
+      exit;
   }
 }
 
+// Check for alerts after the form processing
+if (isset($_SESSION['alert'])) {
+    $alert = $_SESSION['alert'];
+    echo '<script>
+            Swal.fire({
+                icon: "' . $alert['icon'] . '",
+                title: "' . $alert['title'] . '",
+                showConfirmButton: true
+            });
+        </script>';
+    unset($_SESSION['alert']); // Clear the alert so it doesn't show again
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -200,30 +206,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sign-up'])) {
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
-    // Wait for the document to be fully loaded
     document.addEventListener("DOMContentLoaded", function () {
-      const form = document.querySelector('#signUpForm');
-      
-      form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent the form from submitting immediately
+        const form = document.querySelector('#signUpForm');
         
-        // Show SweetAlert message
-        Swal.fire({
-          title: 'Success!',
-          text: 'A verification code has been sent to your email.',
-          icon: 'success',
-          confirmButtonText: 'Proceed to OTP',
-          background: '#2a2f3b',
-          color: '#ffffff',
-          confirmButtonColor: '#4a90e2',
-        }).then(function() {
-          // After SweetAlert is confirmed, submit the form and redirect to otp.php
-          form.submit(); // This will submit the form after SweetAlert
-          window.location = '../CyberSecurity/reg_otp/otp.php'; // Redirect to OTP page
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(form);
+            formData.append('ajax', 'true'); // Add an identifier for AJAX requests
+
+            try {
+                const response = await fetch('signup.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: result.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        background: '#2a2f3b',
+                        color: '#ffffff',
+                        confirmButtonColor: '#4a90e2',
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: result.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        background: '#2a2f3b',
+                        color: '#ffffff',
+                        confirmButtonColor: '#4a90e2',
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'An unexpected error occurred. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    background: '#2a2f3b',
+                    color: '#ffffff',
+                    confirmButtonColor: '#4a90e2',
+                });
+            }
         });
-      });
     });
-  </script>
+</script>
+
 </body>
 
 </html>  
