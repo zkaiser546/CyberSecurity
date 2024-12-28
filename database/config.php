@@ -72,13 +72,13 @@ $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 )";
 
-$sqlReset = "CREATE TABLE IF NOT EXISTS password_resets (
+$sqlReset = "CREATE TABLE verification_codes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
-    code INT NOT NULL,
+    code VARCHAR(6) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    KEY email (email(250))
-)";
+    UNIQUE KEY unique_email (email)
+);";
 
 if ($conn->query($sqlReset) === TRUE) {
     echo "Table 'Password reset table' created successfully<br>";
