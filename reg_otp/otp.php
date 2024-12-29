@@ -81,12 +81,26 @@ ini_set('error_log', '/path/to/error.log');
 
   <!-- JavaScript -->
   <script>
-    // Constants
+    // Constants and element selection (keep existing code)
     const TIMER_KEY = "otpTimerEnd";
     const submitOtpBtn = document.getElementById("submit-otp-btn");
     const timerElement = document.getElementById("timer");
     const otpInput = document.getElementById("otp");
     let countdown;
+
+    // Add this initialization code
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if there's an existing timer
+      const remainingTime = getRemainingTime();
+      if (remainingTime > 0) {
+        // Start countdown with existing time
+        startCountdown(10, true);
+      } else {
+        // No timer running, show Resend button
+        timerElement.classList.remove("timer-disabled");
+        timerElement.textContent = "Resend";
+      }
+    });
 
     // Input validation - only allow numbers
     otpInput.addEventListener('input', (e) => {
@@ -167,21 +181,23 @@ ini_set('error_log', '/path/to/error.log');
           submitOtpBtn.textContent = "Submit";
         });
     });
-    // Timer functions
+    // Update the startCountdown function
     function startCountdown(minutes, fromReload = false) {
       clearInterval(countdown); // Clear any existing countdown
-      let time = minutes * 60;
+      let time;
 
       if (fromReload) {
         time = getRemainingTime();
         if (time <= 0) {
           timerElement.classList.remove("timer-disabled");
           timerElement.textContent = "Resend";
+          localStorage.removeItem(TIMER_KEY);
           return;
         }
       } else {
+        time = minutes * 60;
         const endTime = Date.now() + time * 1000;
-        localStorage.setItem(TIMER_KEY, endTime);
+        localStorage.setItem(TIMER_KEY, endTime.toString());
       }
 
       timerElement.classList.add("timer-disabled");
@@ -200,16 +216,19 @@ ini_set('error_log', '/path/to/error.log');
       }, 1000);
     }
 
+    // Keep the existing updateTimerDisplay function
     function updateTimerDisplay(time) {
       const minutes = Math.floor(time / 60);
       const seconds = time % 60;
       timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, "0")}`;
     }
 
+    // Update the getRemainingTime function to be more precise
     function getRemainingTime() {
       const endTime = localStorage.getItem(TIMER_KEY);
       if (!endTime) return 0;
-      const remainingTime = Math.floor((endTime - Date.now()) / 1000);
+
+      const remainingTime = Math.floor((parseInt(endTime) - Date.now()) / 1000);
       return Math.max(remainingTime, 0);
     }
 
