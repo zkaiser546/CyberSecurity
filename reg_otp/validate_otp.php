@@ -8,6 +8,26 @@ session_start();
 header('Content-Type: application/json');
 include "../database/dbConnect.php";
 
+// Function to generate user ID with prefix
+function generateUserId($conn) {
+    $date = date('Ymd'); // Format: YYYYMMDD
+    
+    // Get the last user ID for today
+    $sql = "SELECT user_id FROM users WHERE user_id LIKE 'USER" . $date . "%' ORDER BY user_id DESC LIMIT 1";
+    $result = $conn->query($sql);
+    
+    if ($result && $result->num_rows > 0) {
+        $lastId = $result->fetch_assoc()['user_id'];
+        // Extract the sequence number and increment
+        $sequence = intval(substr($lastId, -4)) + 1;
+    } else {
+        $sequence = 1; // Start with 1 if no records for today
+    }
+    
+    // Format: USER + YYYYMMDD + 4-digit sequence
+    return 'USER' . $date . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+}
+
 try {
     // Check database connection
     if (!$conn) {
@@ -82,7 +102,7 @@ try {
     error_log("Current time: " . date('Y-m-d H:i:s', $currentTime));
     error_log("Time difference: " . $timeDiff . " seconds");
     
-    if ($timeDiff > 300) {
+    if ($timeDiff > 300) { // 5 minutes expiration
         throw new Exception('OTP has expired (created ' . $timeDiff . ' seconds ago)');
     }
 
@@ -98,19 +118,24 @@ try {
 
     error_log("Creating user account for username: " . $username);
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, status) VALUES (?, ?, ?, 'Inactive')");
+    // Generate new user ID
+    $user_id = generateUserId($conn);
+    error_log("Generated User ID: " . $user_id);
+
+    // Create user account with the generated ID
+    $stmt = $conn->prepare("INSERT INTO users (user_id, username, email, password, status) 
+                           VALUES (?, ?, ?, ?, 'Inactive')");
     
     if (!$stmt) {
         throw new Exception("Database prepare error for user creation: " . $conn->error);
     }
 
-    $stmt->bind_param("sss", $username, $email, $hashed_password);
+    $stmt->bind_param("ssss", $user_id, $username, $email, $hashed_password);
     
     if (!$stmt->execute()) {
         throw new Exception("Failed to create user account: " . $stmt->error);
     }
 
-    $user_id = $conn->insert_id;
     $stmt->close();
 
     // Clear the OTP
@@ -123,6 +148,7 @@ try {
     $_SESSION = array();
     $_SESSION['user_id'] = $user_id;
     $_SESSION['username'] = $username;
+    $_SESSION['email'] = $email;
 
     error_log("Account created successfully. User ID: " . $user_id);
 
@@ -139,3 +165,4 @@ try {
         'message' => $e->getMessage()
     ]);
 }
+?>
