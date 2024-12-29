@@ -1,10 +1,10 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require './vendor/autoload.php';
 include '../CyberSecurity/database/dbConnect.php';
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -15,145 +15,123 @@ require './vendor/phpmailer/phpmailer/src/SMTP.php';
 
 session_start();
 
-// Validation functions remain the same
-function validateUsername($username)
-{
-  return preg_match('/^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,}$/', $username);
-}
-
-function validateEmail($email)
-{
-  return filter_var($email, FILTER_VALIDATE_EMAIL);
-}
-
-// Initialize variables
-$username = '';
-$email = '';
-$error = '';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
+  header('Content-Type: application/json');
+  ob_start();
+  
   try {
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
+      $username = trim($_POST['username'] ?? '');
+      $email = trim($_POST['email'] ?? '');
+      $password = $_POST['password'] ?? '';
+      $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if (!empty($username) && !empty($email) && !empty($password) && !empty($confirm_password)) {
-      if (validateUsername($username)) {
-        if (validateEmail($email)) {
-          if ($password === $confirm_password) {
-            if (
-              strlen($password) >= 8 &&
-              preg_match('/[A-Z]/', $password) &&
-              preg_match('/[a-z]/', $password) &&
-              preg_match('/\d/', $password) &&
-              preg_match('/[\W_]/', $password)
-            ) {
-              // Check if email or username already exists
-              $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?");
-              if (!$stmt) {
-                throw new Exception("Database prepare error: " . $conn->error);
-              }
 
-              $stmt->bind_param("ss", $email, $username);
-              if (!$stmt->execute()) {
-                throw new Exception("Database execute error: " . $stmt->error);
-              }
-
-              $stmt->bind_result($count);
-              $stmt->fetch();
-              $stmt->close();
-
-              if ($count == 0) {
-                // Hash the password using SHA3-512
-                if (!function_exists('hash') || !in_array('sha3-512', hash_algos())) {
-                  throw new Exception("SHA3-512 hashing not available");
-                }
-
-                $hashed_password = hash('sha3-512', $password);
-
-                // Store user data in session
-                $_SESSION['user_info'] = [
-                  'username' => $username,
-                  'email' => $email,
-                  'password' => $hashed_password
-                ];
-
-                // Generate verification code
-                $verification_code = rand(100000, 999999);
-
-                // Store verification code
-                $stmt = $conn->prepare("INSERT INTO verification_codes (email, code, created_at) VALUES (?, ?, NOW())");
-                if (!$stmt) {
-                  throw new Exception("Database prepare error: " . $conn->error);
-                }
-
-                $stmt->bind_param("ss", $email, $verification_code);
-
-                if (!$stmt->execute()) {
-                  throw new Exception("Failed to store verification code: " . $stmt->error);
-                }
-
-                $stmt->close();
-
-                // Send verification email
-                $mail = new PHPMailer(true);
-
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
-                $mail->SMTPAuth = true;
-                $mail->Username = 'howardclintforwork@gmail.com';
-                $mail->Password = 'ubek rjec dmwv tdje';
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port = 587;
-
-                $mail->setFrom('no-reply@yourdomain.com', 'Your Company');
-                $mail->addAddress($email);
-                $mail->isHTML(true);
-                $mail->Subject = 'Email Verification Code';
-                $mail->Body = 'Your verification code is: <b>' . $verification_code . '</b>';
-
-                if (!$mail->send()) {
-                  throw new Exception("Failed to send verification email: " . $mail->ErrorInfo);
-                }
-
-                echo json_encode(['success' => true, 'message' => 'Verification email sent successfully!']);
-                exit;
-              } else {
-                echo json_encode(['success' => false, 'message' => 'Email or username already exists.']);
-                exit;
-              }
-            } else {
-              echo json_encode(['success' => false, 'message' => 'Password must meet complexity requirements.']);
-              exit;
-            }
-          } else {
-            echo json_encode(['success' => false, 'message' => 'Passwords do not match.']);
-            exit;
-          }
-        } else {
-          echo json_encode(['success' => false, 'message' => 'Invalid email format.']);
-          exit;
-        }
-      } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid username format.']);
-        exit;
+      $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?");
+      if (!$stmt) {
+          throw new Exception("Database prepare error: " . $conn->error);
       }
-    } else {
-      echo json_encode(['success' => false, 'message' => 'All fields are required.']);
-      exit;
-    }
-  } catch (Exception $e) {
-    // Log the error for debugging
-    error_log("Signup Error: " . $e->getMessage());
 
-    // Send a more specific error message to the client
-    echo json_encode([
-      'success' => false,
-      'message' => 'An error occurred during signup: ' . $e->getMessage()
-    ]);
-    exit;
+      $stmt->bind_param("ss", $email, $username);
+      if (!$stmt->execute()) {
+          throw new Exception("Database execute error: " . $stmt->error);
+      }
+      $stmt->bind_result($count);
+      $stmt->fetch();
+      $stmt->close();
+
+      if ($count > 0) {
+          throw new Exception('Email or username already exists. Please choose different credentials.');
+      }
+
+      // First, delete any existing verification codes for this email
+      $delete_stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ?");
+      if (!$delete_stmt) {
+          throw new Exception("Failed to prepare deletion statement: " . $conn->error);
+      }
+
+      $delete_stmt->bind_param("s", $email);
+      if (!$delete_stmt->execute()) {
+          throw new Exception("Failed to delete old verification codes: " . $delete_stmt->error);
+      }
+      $delete_stmt->close();
+
+      // Generate new verification code
+      $verification_code = rand(100000, 999999);
+      
+      // Insert new verification code
+      $stmt = $conn->prepare("INSERT INTO verification_codes (email, code, created_at) VALUES (?, ?, NOW())");
+      if (!$stmt) {
+          throw new Exception("Failed to prepare verification code storage: " . $conn->error);
+      }
+
+      $stmt->bind_param("ss", $email, $verification_code);
+      if (!$stmt->execute()) {
+          // Check specifically for duplicate entry error
+          if ($stmt->errno === 1062) {
+              throw new Exception("This email is already pending verification. Please check your email for the verification code or wait a few minutes to try again.");
+          } else {
+              throw new Exception("Failed to store verification code: " . $stmt->error);
+          }
+      }
+      $stmt->close();
+
+      // Store user info in session
+      $_SESSION['user_info'] = [
+          'username' => $username,
+          'email' => $email,
+          'password' => hash('sha3-512', $password)
+      ];
+
+      // Send verification email using PHPMailer
+      $mail = new PHPMailer(true);
+      try {
+          $mail->isSMTP();
+          $mail->Host = 'smtp.gmail.com';
+          $mail->SMTPAuth = true;
+          $mail->Username = 'howardclintforwork@gmail.com';
+          $mail->Password = 'ubek rjec dmwv tdje';
+          $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+          $mail->Port = 587;
+
+          $mail->setFrom('no-reply@yourdomain.com', 'Your Company');
+          $mail->addAddress($email);
+          $mail->isHTML(true);
+          $mail->Subject = 'Email Verification Code';
+          $mail->Body = 'Your verification code is: <b>' . $verification_code . '</b>';
+
+          if (!$mail->send()) {
+              throw new Exception("Failed to send verification email: " . $mail->ErrorInfo);
+          }
+
+          // Clear any previous output
+          ob_clean();
+
+          // Send success response
+          echo json_encode([
+              'success' => true,
+              'message' => 'Verification email sent successfully!'
+          ]);
+
+      } catch (Exception $e) {
+          throw new Exception("Email sending failed: " . $e->getMessage());
+      }
+
+  } catch (Exception $e) {
+      // Log the error
+      error_log("Signup Error: " . $e->getMessage());
+      
+      // Clear any output buffers
+      ob_clean();
+      
+      // Send error response
+      echo json_encode([
+          'success' => false,
+          'message' => $e->getMessage()
+      ]);
   }
+  
+  ob_end_flush();
+  exit;
 }
 ?>
 
@@ -264,16 +242,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
           const formData = new FormData(form);
           formData.append('ajax', 'true');
 
+          console.log('Sending form data:', Object.fromEntries(formData));
+
           const response = await fetch('signup.php', {
             method: 'POST',
-            body: formData,
+            body: formData
           });
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+          console.log('Response status:', response.status);
+          console.log('Response headers:', response.headers);
 
-          const result = await response.json();
+          // Get the raw text first
+          const rawResponse = await response.text();
+          console.log('Raw response:', rawResponse);
+
+          // Try to parse it as JSON
+          let result;
+          try {
+            result = JSON.parse(rawResponse);
+          } catch (e) {
+            throw new Error(`Invalid JSON response: ${rawResponse}`);
+          }
 
           if (result.success) {
             Swal.fire({
@@ -300,9 +289,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
           }
         } catch (error) {
           console.error('Error:', error);
+
           Swal.fire({
             title: 'Error!',
-            text: 'Server error: ' + error.message,
+            text: error.message || 'An unexpected error occurred',
             icon: 'error',
             confirmButtonText: 'OK',
             background: '#2a2f3b',

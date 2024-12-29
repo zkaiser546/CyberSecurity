@@ -1,3 +1,11 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', '/path/to/error.log');
+
+
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -159,24 +167,6 @@
           submitOtpBtn.textContent = "Submit";
         });
     });
-
-    // Send OTP function
-    function sendOtp() {
-      return fetch("send_otp.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: 'include' // Important for session handling
-        })
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(err => Promise.reject(err));
-          }
-          return response.json();
-        });
-    }
-
     // Timer functions
     function startCountdown(minutes, fromReload = false) {
       clearInterval(countdown); // Clear any existing countdown
@@ -224,51 +214,66 @@
     }
 
     // Resend OTP handler
-    timerElement.addEventListener("click", () => {
-      if (timerElement.classList.contains("timer-disabled")) return;
+    timerElement.addEventListener("click", async function() {
+      // Only proceed if the timer is not running
+      if (!timerElement.classList.contains("timer-disabled")) {
+        try {
+          // Set loading state
+          timerElement.textContent = "Sending...";
+          timerElement.classList.add("timer-disabled");
 
-      timerElement.textContent = "Sending...";
-      timerElement.classList.add("timer-disabled");
+          const formData = new FormData();
+          formData.append('ajax', '1');
 
-      sendOtp()
-        .then((data) => {
-          if (data.status === "success") {
+          // First, check if the session is active
+          const response = await fetch("resend_otp.php", {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+          });
+
+          // Get the raw text first
+          const responseText = await response.text();
+
+          // Try to parse as JSON
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            console.error('Failed to parse JSON response:', responseText);
+            throw new Error('Server returned invalid response format');
+          }
+
+          if (data.success) {
+            // Start new countdown
+            startCountdown(10); // 10 minutes countdown
+
             Swal.fire({
               icon: "success",
-              title: "OTP Sent",
-              text: "A new OTP has been sent to your email!",
-              timer: 2000,
-              timerProgressBar: true,
-              showConfirmButton: false,
+              title: "OTP Resent",
+              text: data.message,
               background: '#2a2f3b',
               color: '#ffffff',
               confirmButtonColor: '#4a90e2',
             });
-            startCountdown(5); // 5 minutes countdown
           } else {
-            throw new Error(data.message || "Failed to send OTP");
+            throw new Error(data.message || "Failed to resend OTP");
           }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
+        } catch (error) {
+          console.error("Error details:", error);
+
           timerElement.classList.remove("timer-disabled");
           timerElement.textContent = "Resend";
+
           Swal.fire({
             icon: "error",
-            title: "Error Sending OTP",
-            text: error.message || "Failed to send OTP. Please try again.",
+            title: "Failed to Resend OTP",
+            text: error.message || "Please try again later",
             background: '#2a2f3b',
             color: '#ffffff',
             confirmButtonColor: '#4a90e2',
           });
-        });
-    });
-
-    // Initialize timer on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      const remainingTime = getRemainingTime();
-      if (remainingTime > 0) {
-        startCountdown(5, true);
+        }
       }
     });
   </script>
