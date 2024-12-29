@@ -36,8 +36,6 @@ $Super_Admin = "CREATE TABLE IF NOT EXISTS supAdmin (
     role VARCHAR(50) NOT NULL
 )";
 
-
-
 // Create Admin table if it doesn't exist
 $sqlAdmin = "CREATE TABLE IF NOT EXISTS admin (
     admin_id VARCHAR(255) PRIMARY KEY,
@@ -48,86 +46,64 @@ $sqlAdmin = "CREATE TABLE IF NOT EXISTS admin (
     status VARCHAR(50) NOT NULL
 )";
 
-
-
 // Create Users table if it doesn't exist
 $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY, -- Auto increment user ID
+    user_id VARCHAR(20) PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     image VARCHAR(255) DEFAULT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('Active', 'Inactive'))
-);";
-
-
+)";
 
 // Create Feedback table if it doesn't exist
 $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
     feedback_dD VARCHAR(255) PRIMARY KEY,
-    user_id INT  NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
     feedback_text VARCHAR(500) NOT NULL,
     stars INT NOT NULL CHECK (Stars BETWEEN 1 AND 5),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 )";
 
-$sqlReset = "CREATE TABLE verification_codes (
+// Create verification_codes table
+$sqlReset = "CREATE TABLE IF NOT EXISTS verification_codes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
     code VARCHAR(6) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_email (email)
-)";
+    expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 10 MINUTE),
+    attempts INT DEFAULT 0,
+    INDEX idx_email (email)
+);";
 
-$sqlLogs = "CREATE TABLE admin_logs (
+// Create admin_logs table
+$sqlLogs = "CREATE TABLE IF NOT EXISTS admin_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
-    admin_id INT NOT NULL,
+    admin_id VARCHAR(255) NOT NULL,
     feedback_dD VARCHAR(255) NOT NULL,
     action VARCHAR(255) NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES admin(admin_id),
-    FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD)
-);
-";
-if ($conn->query($sqlLogs) === TRUE) {
-    echo "Table 'Password Admin_Logs table' created successfully<br>";
-} else {
-    echo "Error creating Admin_Logs table: " . $conn->error;
-} 
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE CASCADE,
+    FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD) ON DELETE CASCADE
+)";
 
-if ($conn->query($sqlReset) === TRUE) {
-    echo "Table 'Password reset table' created successfully<br>";
-} else {
-    echo "Error creating SupAdmin table: " . $conn->error;
-}   
+// Execute the creation of tables in the correct order
+$tables = [
+    'Super_Admin' => $Super_Admin,
+    'Admin' => $sqlAdmin,
+    'Users' => $sqlUsers,
+    'Feedback' => $sqlFeedback,
+    'Verification Codes' => $sqlReset,
+    'Admin Logs' => $sqlLogs
+];
 
-
-if ($conn->query($Super_Admin) === TRUE) {
-    echo "Table 'SupAdmin' created successfully<br>";
-} else {
-    echo "Error creating SupAdmin table: " . $conn->error;
-}    
-
-
-if ($conn->query($sqlAdmin) === TRUE) {
-    echo "Table 'Admin' created successfully<br>";
-} else {
-    echo "Error creating Admin table: " . $conn->error;
-}
-
-
-if ($conn->query($sqlUsers) === TRUE) {
-    echo "Tables 'Users' created successfully.<br>";
-} else {
-    echo "Error creating table: " . $conn->error;
-}
-
-
-if ($conn->query($sqlFeedback) === TRUE) {
-    echo "Table 'Feedback' created successfully.";
-} else {
-    echo "Error creating Feedback table: " . $conn->error;
+foreach ($tables as $tableName => $query) {
+    if ($conn->query($query) === TRUE) {
+        echo "Table '$tableName' created successfully<br>";
+    } else {
+        echo "Error creating $tableName table: " . $conn->error . "<br>";
+    }
 }
 
 // Close the connection
