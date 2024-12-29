@@ -130,7 +130,73 @@ $result = $conn->query($sql);
         <p class="text-gray-300 mt-2">Use the sidebar to manage users, view logs, and generate reports.</p>
       </div>
     </main>
+    
   </div>
+  <!-- Edit User Modal -->
+<div id="edit-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2 class="text-2xl font-bold text-white mb-4">Edit User</h2>
+    <form id="edit-user-form">
+      <input type="hidden" id="edit-user-id" name="user_ID">
+      <div class="mb-4">
+        <label for="edit-firstname" class="block text-sm font-medium text-gray-300">First Name</label>
+        <input type="text" id="edit-firstname" name="firstname" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-lastname" class="block text-sm font-medium text-gray-300">Last Name</label>
+        <input type="text" id="edit-lastname" name="lastname" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-email" class="block text-sm font-medium text-gray-300">Email</label>
+        <input type="email" id="edit-email" name="email" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-status" class="block text-sm font-medium text-gray-300">Status</label>
+        <select id="edit-status" name="status" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="flex justify-end space-x-4">
+        <button type="button" id="cancel-edit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Cancel</button>
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Edit User Modal -->
+<div id="edit-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2 class="text-2xl font-bold text-white mb-4">Edit User</h2>
+    <form id="edit-user-form">
+      <input type="hidden" id="edit-user-id" name="user_ID">
+      <div class="mb-4">
+        <label for="edit-firstname" class="block text-sm font-medium text-gray-300">First Name</label>
+        <input type="text" id="edit-firstname" name="firstname" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-lastname" class="block text-sm font-medium text-gray-300">Last Name</label>
+        <input type="text" id="edit-lastname" name="lastname" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-email" class="block text-sm font-medium text-gray-300">Email</label>
+        <input type="email" id="edit-email" name="email" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+      </div>
+      <div class="mb-4">
+        <label for="edit-status" class="block text-sm font-medium text-gray-300">Status</label>
+        <select id="edit-status" name="status" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="flex justify-end space-x-4">
+        <button type="button" id="cancel-edit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Cancel</button>
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
   <!-- JavaScript -->
   <script>
@@ -177,34 +243,124 @@ $result = $conn->query($sql);
         window.location.href = "../login.php";
       });
 
+
+      <?php 
+        $sql = "SELECT user_ID, firstname, lastname, email, status
+                 FROM users 
+                 ORDER BY user_ID DESC";
+            $result = $conn->query($sql);
+      ?>
       // Manage Users Tab
       document.getElementById("manage-users-btn").addEventListener("click", () => {
-        contentArea.innerHTML = `
-          <div class="content-card p-8">
-            <h2 class="text-3xl font-bold text-white mb-4">Manage Users</h2>
-            <table class="w-full bg-gray-900 rounded-lg">
-              <thead class="bg-gray-800">
+  contentArea.innerHTML = `
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Manage Users</h2>
+      <table class="w-full bg-gray-900 rounded-lg">
+        <thead class="bg-gray-800">
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php
+          if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+              $fullName = htmlspecialchars($row['firstname'] . ' ' . $row['lastname']);
+              $email = htmlspecialchars($row['email']);
+              $status = htmlspecialchars($row['status']);
+              $userId = htmlspecialchars($row['user_ID']);
+
+              echo "
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  <td>{$userId}</td>
+                  <td>{$fullName}</td>
+                  <td>{$email}</td>
+                  <td>{$status}</td>
+                  <td><button class='text-blue-400 edit-btn' data-user-id='{$userId}'>Edit</button></td>
                 </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>John Doe</td>
-                  <td>john@example.com</td>
-                  <td>Active</td>
-                  <td><button class="text-blue-400">Edit</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
-      });
+              ";
+            }
+          } else {
+            echo "<tr><td colspan='5'>No users found.</td></tr>";
+          }
+          ?>
+        </tbody>
+      </table>
+    </div>
+  `;
+});
+//edit user
+/*document.addEventListener("DOMContentLoaded", () => {
+  const editModal = document.getElementById("edit-modal");
+  const cancelEdit = document.getElementById("cancel-edit");
+
+  // Open the modal when an Edit button is clicked (already handled in your script)
+  document.addEventListener("click", (event) => {
+    if (event.target.classList.contains("edit-btn")) {
+      const userId = event.target.getAttribute("data-user-id");
+
+      // Fetch the user's data (AJAX or fetch API)
+      fetch(`getUserDetails.php?user_ID=${userId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          document.getElementById("edit-user-id").value = data.user_ID;
+          document.getElementById("edit-firstname").value = data.firstname;
+          document.getElementById("edit-lastname").value = data.lastname;
+          document.getElementById("edit-email").value = data.email;
+          document.getElementById("edit-status").value = data.status;
+
+          // Show the modal
+          editModal.classList.remove("hidden");
+        })
+        .catch((error) => console.error("Error fetching user details:", error));
+    }
+  });
+
+  // Close the modal when the Cancel button is clicked
+  cancelEdit.addEventListener("click", () => {
+    editModal.classList.add("hidden");
+  });
+
+  // Handle the form submission
+  document.getElementById("edit-user-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    // Collect form data
+    const formData = new FormData(e.target);
+
+    // Send updated data to the server
+    fetch("updateUser.php", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          alert("User updated successfully!");
+          editModal.classList.add("hidden");
+          // Optionally, refresh the user table or update it dynamically
+        } else {
+          alert("Error updating user: " + data.message);
+        }
+      })
+      .catch((error) => console.error("Error updating user:", error));
+  });
+});*/
+
+ <?php 
+        $sql = "SELECT 
+      CONCAT(a.firstname, ' ', a.lastname) AS full_name,   
+    l.action, 
+    l.timestamp
+FROM admin_logs l
+JOIN admin a ON l.admin_id = a.admin_id
+ORDER BY l.timestamp DESC;";
+            $result2 = $conn->query($sql);
+      ?>
 
       // Admin & Super Admin Logs Tab
       document.getElementById("view-logs-btn").addEventListener("click", () => {
@@ -220,11 +376,26 @@ $result = $conn->query($sql);
                 </tr>
               </thead>
               <tbody>
+               <?php
+          if ($result2->num_rows > 0) {
+            while ($row = $result2->fetch_assoc()) {
+              $name = htmlspecialchars($row['full_name']);
+              $action = htmlspecialchars($row['action']);
+              $time = htmlspecialchars($row['timestamp']);
+              
+
+              echo "
                 <tr>
-                  <td>2024-11-18</td>
-                  <td>Admin John</td>
-                  <td>Updated Feedback</td>
+                  <td>{$time}</td>
+                  <td>{$name}</td>
+                  <td>{$action}</td>
                 </tr>
+              ";
+            }
+          } else {
+            echo "<tr><td colspan='3'>No logs found.</td></tr>";
+          }
+          ?>
               </tbody>
             </table>
           </div>
