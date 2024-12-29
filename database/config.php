@@ -78,7 +78,23 @@ $sqlReset = "CREATE TABLE verification_codes (
     code VARCHAR(6) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_email (email)
-);";
+)";
+
+$sqlLogs = "CREATE TABLE admin_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    feedback_dD VARCHAR(255) NOT NULL,
+    action VARCHAR(255) NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id),
+    FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD)
+);
+";
+if ($conn->query($sqlLogs) === TRUE) {
+    echo "Table 'Password Admin_Logs table' created successfully<br>";
+} else {
+    echo "Error creating Admin_Logs table: " . $conn->error;
+} 
 
 if ($conn->query($sqlReset) === TRUE) {
     echo "Table 'Password reset table' created successfully<br>";
