@@ -34,7 +34,7 @@ function sendOTPEmail($email, $otp) {
         $mail->Port       = 587;
 
         // Recipients
-        $mail->setFrom('your-email@gmail.com', 'Your Company Name');
+        $mail->setFrom('your-email@gmail.com', 'Secure Feedback');
         $mail->addAddress($email);
 
         // Content

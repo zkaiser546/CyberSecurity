@@ -16,7 +16,7 @@ ini_set('error_log', '/path/to/error.log');
   <title>OTP Verification</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
+  <link rel="icon" href="../Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);

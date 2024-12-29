@@ -93,11 +93,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
           $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
           $mail->Port = 587;
 
-          $mail->setFrom('no-reply@yourdomain.com', 'Your Company');
+          $mail->setFrom('no-reply@yourdomain.com', 'Secure Feedback');
           $mail->addAddress($email);
           $mail->isHTML(true);
           $mail->Subject = 'Email Verification Code';
-          $mail->Body = 'Your verification code is: <b>' . $verification_code . '</b>';
+          $mail->Body = "
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    .container { padding: 20px; }
+                    .otp-code { 
+                        font-size: 24px; 
+                        font-weight: bold;
+                        color: #4a90e2;
+                        letter-spacing: 2px;
+                    }
+                    .warning {
+                        color: #e74c3c;
+                        font-size: 14px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <h2>Your Verification Code</h2>
+                    <p>Here is your verification code:</p>
+                    <p class='otp-code'>$verification_code</p>
+                    <p>This code will expire in 10 minutes.</p>
+                    <p class='warning'>Do not share this code with anyone.</p>
+                </div>
+            </body>
+            </html>
+        ";
 
           if (!$mail->send()) {
               throw new Exception("Failed to send verification email: " . $mail->ErrorInfo);
