@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
@@ -27,10 +29,12 @@
     }
   </style>
 </head>
+
 <body class="flex items-center justify-center h-screen">
 
   <div class="glass w-full max-w-md p-8">
     <h1 class="text-3xl font-bold text-white mb-6 text-center uppercase">Welcome Back</h1>
+    <div id="error-message" class="mb-4"></div>
     <form id="login-form" method="POST" action="users_login.php">
       <!-- Email -->
       <div class="mb-6">
@@ -39,10 +43,16 @@
           class="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-gray-300 focus:ring-blue-500 focus:border-blue-500" required>
       </div>
       <!-- Password -->
-      <div class="mb-6">
+      <div class="mb-6 relative">
         <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
-        <input type="password" id="password" name="password" placeholder="Enter your password"
-          class="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-gray-300 focus:ring-blue-500 focus:border-blue-500" required>
+        <div class="relative">
+          <input type="password" id="password" name="password" placeholder="Enter your password"
+            class="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-gray-300 focus:ring-blue-500 focus:border-blue-500 pr-10" required>
+          <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+            onclick="togglePasswordVisibility('password')">
+            <span id="togglePasswordIcon"><i class="fa-solid fa-eye"></i></span>
+          </button>
+        </div>
       </div>
       <!-- Login Button -->
       <button type="submit"
@@ -52,68 +62,57 @@
     </form>
     <!-- Sign-Up Redirect -->
     <div class="mt-6 text-center">
-      <p class="text-gray-400">Don't have an account? 
+      <p class="text-gray-400">Don't have an account?
         <a href="signup.php" class="text-blue-400 hover:underline">Sign Up</a>
       </p>
     </div>
   </div>
-
- <!--<script>
-  document.getElementById("login-form").addEventListener("submit", function(event) {
-    event.preventDefault(); // Prevent form submission
-
-    // Get email and password values
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    // Send AJAX request to the server
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "user_login.php", true); // Change to the PHP script handling login
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-
-    // Prepare data to send to the server
-    const data = `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
-
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText); // Parse the JSON response
-
-        if (response.success) {
-          // SweetAlert2 Success Alert
-          Swal.fire({
-            icon: "success",
-            title: "Login Successful",
-            text: "Redirecting to the dashboard...",
-            timer: 2000,
-            timerProgressBar: true,
-            showConfirmButton: false,
-          }).then(() => {
-            window.location.href = response.redirectUrl; // Redirect based on server's response
-          });
-        } else {
-          // SweetAlert2 Error Alert
-          Swal.fire({
-            icon: "error",
-            title: "Invalid Credentials",
-            text: response.message, // Show error message returned by the server
-            showConfirmButton: true,
-          });
-        }
+  </div>
+  <script>
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      const icon = input.nextElementSibling.querySelector("i");
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
       } else {
-        // Handle error from the server
-        Swal.fire({
-          icon: "error",
-          title: "Server Error",
-          text: "There was an error processing your request. Please try again later.",
-          showConfirmButton: true,
-        });
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
       }
-    };
+    }
+    // Add this JavaScript to handle the form submission
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
 
-    // Send the request
-    xhr.send(data);
-  });
-</script> -->
+      const formData = new FormData(this);
 
+      fetch('users_login.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.href = data.redirect;
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Login Failed',
+              text: data.message
+            });
+          }
+        })
+        .catch(error => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An unexpected error occurred. Please try again.'
+          });
+        });
+    });
+  </script>
 </body>
+
 </html>

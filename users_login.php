@@ -1,72 +1,72 @@
 <?php
-session_start(); // Start a session to store user data
-include('../CyberSecurity/database/dbConnect.php'); // Include your database connection
+session_start();
+include('../CyberSecurity/database/dbConnect.php');
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Get user input from the form
     $email = $_POST['email'];
-    $password = $_POST['password'];
+    $password = hash('sha3-512', $_POST['password']);
+    $response = ['success' => false, 'message' => '', 'redirect' => ''];
 
-         $supadminSql = "SELECT spAd_ID, password FROM supadmin WHERE email = ?";
-        $supadminStmt = $conn->prepare($supadminSql);
-        $supadminStmt->bind_param("s", $email);
-        $supadminStmt->execute();
-        $supadminStmt->store_result();
+    // Super Admin check
+    $supadminSql = "SELECT spAd_ID, password FROM supadmin WHERE email = ?";
+    $supadminStmt = $conn->prepare($supadminSql);
+    $supadminStmt->bind_param("s", $email);
+    $supadminStmt->execute();
+    $supadminResult = $supadminStmt->get_result();
 
-         $adminSql = "SELECT admin_ID, password FROM admin WHERE email = ?";
-        $adminStmt = $conn->prepare($adminSql);
-        $adminStmt->bind_param("s", $email);
-        $adminStmt->execute();
-        $adminStmt->store_result();
+    // Admin check
+    $adminSql = "SELECT admin_ID, password FROM admin WHERE email = ?";
+    $adminStmt = $conn->prepare($adminSql);
+    $adminStmt->bind_param("s", $email);
+    $adminStmt->execute();
+    $adminResult = $adminStmt->get_result();
 
-         $userSql = "SELECT user_ID, password FROM users WHERE email = ?";
-        $userStmt = $conn->prepare($userSql);
-        $userStmt->bind_param("s", $email);
-        $userStmt->execute();
-        $userStmt->store_result();
-        // Check if user was found
-        if ($supadminStmt->num_rows > 0) {
-             $supadminStmt->bind_result($supadminId, $adminHashedPassword);
-            $supadminStmt->fetch();
-             if (password_verify($password, $adminHashedPassword)) {
-              $_SESSION['spAd_ID'] = $supadminId;
-                //$_SESSION['emp_role'] = 'Admin';
+    // User check
+    $userSql = "SELECT user_ID, password, status FROM users WHERE email = ?";
+    $userStmt = $conn->prepare($userSql);
+    $userStmt->bind_param("s", $email);
+    $userStmt->execute();
+    $userResult = $userStmt->get_result();
+
+    if ($supadminRow = $supadminResult->fetch_assoc()) {
+        if ($password === $supadminRow['password']) {
+            $_SESSION['spAd_ID'] = $supadminRow['spAd_ID'];
+            $response = ['success' => true, 'redirect' => './super_admin/super_admin.php'];
+        }
+    }
+    elseif ($adminRow = $adminResult->fetch_assoc()) {
+        if ($password === $adminRow['password']) {
+            $_SESSION['admin_ID'] = $adminRow['admin_ID'];
+            $response = ['success' => true, 'redirect' => './admin/admin.php'];
+        }
+    }
+    elseif ($userRow = $userResult->fetch_assoc()) {
+        if ($password === $userRow['password']) {
+            $_SESSION['user_ID'] = $userRow['user_ID'];
             
-            }
-             header('Location: ./super_admin/super_admin.php');
-                exit();
-            // Verify the password with the hash stored in the database
-          
+            // Fix the status update query
+            $updateSql = "UPDATE users SET status = 'Active' WHERE user_ID = ?";
+            $updateStmt = $conn->prepare($updateSql);
+            $updateStmt->bind_param("s", $userRow['user_ID']);
+            $updateStmt->execute();
+            $updateStmt->close();
+            
+            $response = ['success' => true, 'redirect' => './user/user.php'];
         }
-        
-        else if($adminStmt->num_rows > 0){
-            $adminStmt->bind_result($adminId, $adminHashedPassword);
-            $adminStmt->fetch();
-             if (password_verify($password, $adminHashedPassword)) {
-              $_SESSION['admin_ID'] = $adminId;
-             }
-             header('Location: ./admin/admin.php');
-                exit();
-        }
-         else if($userStmt->num_rows > 0){
-            $userStmt->bind_result($userId, $adminHashedPassword);
-            $userStmt->fetch();
-             if (password_verify($password, $adminHashedPassword)) {
-              $_SESSION['user_ID'] = $userId;
-             }
-             header('Location: ./user/user.php');
-                exit();
-        }
-
-        else {
-                $error_message = handleFailedAttempt($email, $conn);
-            }
-            $supadminStmt->close();
     }
 
-    // If user not found or invalid password
-    if (!$userFound) {
-        echo "<script>alert('Invalid email or password.');</script>";
+    if (!$response['success']) {
+        $response['message'] = 'Invalid email or password';
     }
 
+    // Close all statements
+    $supadminStmt->close();
+    $adminStmt->close();
+    $userStmt->close();
+
+    echo json_encode($response);
+    exit;
+}
 ?>
