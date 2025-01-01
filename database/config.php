@@ -62,6 +62,7 @@ $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
     user_id VARCHAR(20) NOT NULL,
     feedback_text VARCHAR(500) NOT NULL,
     stars INT NOT NULL CHECK (Stars BETWEEN 1 AND 5),
+    display_name VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 )";
@@ -87,6 +88,32 @@ $sqlLogs = "CREATE TABLE IF NOT EXISTS admin_logs (
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE CASCADE,
     FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD) ON DELETE CASCADE
 )";
+$plainPassword = 'admin2025';
+$hashedPassword = hash('sha3-512', $plainPassword);
+
+$insertQuery = "INSERT INTO supAdmin (spAd_ID, username, email, password, image, status, role)
+SELECT 
+    'SP001',
+    'superadmin',
+    'superadmin@example.com',
+    '$hashedPassword',
+    NULL,
+    'Active',
+    'SuperAdmin'
+WHERE NOT EXISTS (
+    SELECT 1 FROM supAdmin WHERE username = 'superadmin'
+)";
+
+if ($conn->query($insertQuery) === TRUE) {
+    if ($conn->affected_rows > 0) {
+        echo "Super Admin created successfully";
+    } else {
+        echo "Super Admin already exists";
+    }
+} else {
+    echo "Error: " . $conn->error;
+}
+
 
 // Execute the creation of tables in the correct order
 $tables = [

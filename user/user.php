@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feedback System</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <link rel="icon" href="../Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
@@ -27,13 +31,15 @@
       box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
     }
 
-    input, textarea {
+    input,
+    textarea {
       background-color: #1c1f26;
       color: white;
       border: 1px solid #444;
     }
 
-    input:focus, textarea:focus {
+    input:focus,
+    textarea:focus {
       border-color: #3b82f6;
       outline: none;
     }
@@ -52,7 +58,8 @@
 
     .star.hovered,
     .star.selected {
-      color: #fbbf24; /* Yellow for hovered and selected stars */
+      color: #fbbf24;
+      /* Yellow for hovered and selected stars */
     }
 
     /* Modal Styles */
@@ -95,6 +102,7 @@
     }
   </style>
 </head>
+
 <body class="flex h-screen">
 
   <!-- Sidebar -->
@@ -167,6 +175,7 @@
     const modal = document.getElementById("modal");
     const modalBody = document.getElementById("modal-body");
     const closeModal = document.getElementById("close-modal");
+    const submitBtn = document.getElementById('submit-feedback');
 
     closeModal.addEventListener("click", () => {
       modal.classList.add("hidden");
@@ -178,49 +187,49 @@
 
     feedbackBtn.addEventListener("click", () => {
       contentArea.innerHTML = `
-         <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Create Feedback</h2>
-          <div class="mb-6">
-            <p class="text-sm font-medium text-gray-300 mb-2">Rate your experience</p>
-            <div id="star-rating" class="star-rating">
-              <span class="star" data-value="1">★</span>
-              <span class="star" data-value="2">★</span>
-              <span class="star" data-value="3">★</span>
-              <span class="star" data-value="4">★</span>
-              <span class="star" data-value="5">★</span>
+            <div class="content-card p-8">
+                <h2 class="text-3xl font-bold text-white mb-4">Create Feedback</h2>
+                <form id="feedbackForm">
+                    <div class="mb-6">
+                        <p class="text-sm font-medium text-gray-300 mb-2">Rate your experience</p>
+                        <div id="star-rating" class="star-rating">
+                            <span class="star" data-value="1">★</span>
+                            <span class="star" data-value="2">★</span>
+                            <span class="star" data-value="3">★</span>
+                            <span class="star" data-value="4">★</span>
+                            <span class="star" data-value="5">★</span>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <label for="feedback" class="block text-sm font-medium text-gray-300">Your Feedback</label>
+                        <textarea id="feedback" rows="4" class="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div class="mb-6">
+                        <div class="bg-gray-800 text-gray-300 p-4 rounded-lg mb-4">
+                            <p><strong>Note:</strong> Your name will be visible to the admin. If you prefer to remain anonymous, please check the box below.</p>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="anonymous" class="mr-2 w-4 h-4">
+                            <label for="anonymous" class="text-gray-300">Submit as anonymous</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">Submit Feedback</button>
+                </form>
             </div>
-          </div>
-          <div class="mb-6">
-            <label for="feedback" class="block text-sm font-medium text-gray-300">Your Feedback</label>
-            <textarea id="feedback" rows="4" class="w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-blue-500"></textarea>
-          </div>
+        `;
 
-
-          <div class="mb-6">
-             <div class="bg-gray-800 text-gray-300 p-4 rounded-lg mb-4">
-             <p><strong>Note:</strong> Your name will be visible to the admin. If you prefer to remain anonymous, please check the box below.</p>
-         </div>
-         <div class="flex items-center">
-            <input type="checkbox" id="anonymous" class="mr-2 w-4 h-4">
-            <label for="anonymous" class="text-gray-300">Submit as anonymous</label>
-         </div>
-        </div>
-
-        
-        <!--tan diri gd ka if i click ni niya ang makita sa admin na nag feedback na name kay same sa gcash example    (k***T. ****)--->
- 
-
-
-
-
-          <button id="submit-feedback" class="w-full bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600">Submit Feedback</button>
-        </div>
-      `;
-
+      // Star rating functionality
       const stars = document.querySelectorAll(".star");
       let selectedRating = 0;
 
-      stars.forEach((star) => {
+      const resetStars = () => stars.forEach(star => star.classList.remove("hovered", "selected"));
+      const highlightStars = rating => {
+        stars.forEach(star => {
+          if (star.dataset.value <= rating) star.classList.add("hovered");
+        });
+      };
+
+      stars.forEach(star => {
         star.addEventListener("mouseover", () => {
           resetStars();
           highlightStars(star.dataset.value);
@@ -238,17 +247,74 @@
         });
       });
 
-      function resetStars() {
-        stars.forEach((star) => star.classList.remove("hovered", "selected"));
-      }
+      // Form submission
+      document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-      function highlightStars(rating) {
-        stars.forEach((star) => {
-          if (star.dataset.value <= rating) star.classList.add("hovered");
-        });
-      }
+        const feedback = document.getElementById('feedback').value;
+        const anonymous = document.getElementById('anonymous').checked;
+
+        if (!feedback) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Please provide feedback'
+          });
+          return;
+        }
+
+        if (!selectedRating) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Please select a rating'
+          });
+          return;
+        }
+
+        // Encrypt feedback before sending
+        const encryptedFeedback = CryptoJS.SHA3(feedback, {
+          outputLength: 512
+        }).toString();
+
+        const formData = new FormData();
+        formData.append('feedback', encryptedFeedback);
+        formData.append('rating', selectedRating);
+        formData.append('anonymous', anonymous);
+
+        try {
+          const response = await fetch('feedback_submit.php', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message,
+              showConfirmButton: false,
+              timer: 1500
+            }).then(() => {
+              document.getElementById('feedback').value = '';
+              document.getElementById('anonymous').checked = false;
+              resetStars();
+              selectedRating = 0;
+            });
+          } else {
+            throw new Error(result.message);
+          }
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error submitting feedback. Please try again.'
+          });
+        }
+      });
     });
-
     historyBtn.addEventListener("click", () => {
       contentArea.innerHTML = `
         <div class="content-card p-8">
@@ -314,8 +380,9 @@
     });
 
     logoutBtn.addEventListener("click", () => {
-      window.location.href = "login.html";
+      window.location.href = "../login.php";
     });
   </script>
 </body>
+
 </html>
