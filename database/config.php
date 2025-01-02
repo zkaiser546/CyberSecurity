@@ -54,7 +54,7 @@ $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     image VARCHAR(255) DEFAULT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('Active', 'Inactive'))
-)";
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ";
 
 // Create Feedback table if it doesn't exist
 $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
@@ -65,7 +65,7 @@ $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
     display_name VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-)";
+)ENGINE=InnoDB ROW_FORMAT=DYNAMIC CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ";
 
 // Create verification_codes table
 $sqlReset = "CREATE TABLE IF NOT EXISTS verification_codes (
@@ -95,7 +95,7 @@ $insertQuery = "INSERT INTO supAdmin (spAd_ID, username, email, password, image,
 SELECT 
     'SP001',
     'superadmin',
-    'superadmin@example.com',
+    'superadmin@gmail.com',
     '$hashedPassword',
     NULL,
     'Active',
