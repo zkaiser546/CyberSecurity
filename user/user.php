@@ -1,3 +1,13 @@
+<?php
+session_start();
+include '../database/dbConnect.php';
+if (!isset($_SESSION['user_ID'])) {
+  header("Location: ../login.php");
+  exit();
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -248,34 +258,37 @@
       });
 
       // Form submission
+      const encryptFeedback = (feedback, key) => {
+        const iv = CryptoJS.lib.WordArray.random(16);
+        const encrypted = CryptoJS.AES.encrypt(feedback, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        });
+
+        // Combine IV and encrypted data
+        return iv.toString() + encrypted.toString();
+      };
+
+      // Modified form submission
       document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const feedback = document.getElementById('feedback').value;
         const anonymous = document.getElementById('anonymous').checked;
 
-        if (!feedback) {
+        if (!feedback || !selectedRating) {
           Swal.fire({
             icon: 'error',
             title: 'Oops...',
-            text: 'Please provide feedback'
+            text: 'Please provide feedback and rating'
           });
           return;
         }
 
-        if (!selectedRating) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Please select a rating'
-          });
-          return;
-        }
-
-        // Encrypt feedback before sending
-        const encryptedFeedback = CryptoJS.SHA3(feedback, {
-          outputLength: 512
-        }).toString();
+        // Use a secure key (in production, this should be fetched from server)
+        const encryptionKey = 'SecureFeedback250';
+        const encryptedFeedback = encryptFeedback(feedback, encryptionKey);
 
         const formData = new FormData();
         formData.append('feedback', encryptedFeedback);
@@ -315,32 +328,67 @@
         }
       });
     });
-    historyBtn.addEventListener("click", () => {
-      contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">History</h2>
-          <table class="w-full text-left border-collapse bg-gray-900 rounded-lg">
-            <thead class="bg-gray-800">
-              <tr>
-                <th class="px-6 py-3 text-sm font-medium text-gray-400">Date</th>
-                <th class="px-6 py-3 text-sm font-medium text-gray-400">Feedback</th>
-                <th class="px-6 py-3 text-sm font-medium text-gray-400">Stars</th>
-                <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="px-6 py-4">2024-12-03</td>
-                <td class="px-6 py-4">Awesome experience!</td>
-                <td class="px-6 py-4 text-yellow-400">★★★★★</td>
-                <td class="px-6 py-4">
-                  <button class="text-blue-400 hover:underline view-reply-btn" data-reply="Thank you for your feedback!">View</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    // Decryption function
+    const decryptFeedback = (encryptedData, key) => {
+      const iv = CryptoJS.enc.Hex.parse(encryptedData.substr(0, 32));
+      const encrypted = encryptedData.substr(32);
+      return CryptoJS.AES.decrypt(encrypted, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      }).toString(CryptoJS.enc.Utf8);
+    };
+
+    historyBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch('retrieve_history.php');
+        const feedbackData = await response.json();
+        const encryptionKey = 'SecureFeedback250';
+
+        let tableRows = feedbackData.map(item => {
+          const decryptedText = decryptFeedback(item.feedback_text, encryptionKey);
+          const stars = '★'.repeat(parseInt(item.stars));
+          const date = new Date(item.created_at).toLocaleDateString();
+
+          return `
+        <tr>
+          <td class="px-6 py-4">${date}</td>
+          <td class="px-6 py-4">${decryptedText}</td>
+          <td class="px-6 py-4 text-yellow-400">${stars}</td>
+          <td class="px-6 py-4">
+            <button class="text-blue-400 hover:underline view-reply-btn" data-reply="Thank you for your feedback!">View</button>
+          </td>
+        </tr>
       `;
+        }).join('');
+
+        contentArea.innerHTML = `
+      <div class="content-card p-8">
+        <h2 class="text-3xl font-bold text-white mb-4">History</h2>
+        <table class="w-full text-left border-collapse bg-gray-900 rounded-lg">
+          <thead class="bg-gray-800">
+            <tr>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Date</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Feedback</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Stars</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+    `;
+      } catch (error) {
+        console.error('Error fetching feedback:', error);
+        contentArea.innerHTML = `
+      <div class="content-card p-8">
+        <h2 class="text-3xl font-bold text-white mb-4">Error</h2>
+        <p class="text-red-500">Failed to load feedback history.</p>
+      </div>
+    `;
+      }
 
       const viewReplyButtons = document.querySelectorAll(".view-reply-btn");
       viewReplyButtons.forEach((btn) => {
@@ -353,34 +401,69 @@
     });
 
     setupProfileBtn.addEventListener("click", () => {
+      const contentArea = document.getElementById("content-area");
       contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
-          <form>
-            <div class="mb-4">
-              <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
-              <input type="file" id="profile-pic" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <div class="mb-4">
-              <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
-              <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <div class="mb-4">
-              <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
-              <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <div class="mb-4">
-              <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
-              <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
-          </form>
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
+      <form id="profile-form">
+        <div class="mb-4">
+          <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
+          <input type="file" id="profile-pic" class="block w-full mt-1 px-4 py-2 border rounded-md">
         </div>
-      `;
+        <div class="mb-4">
+          <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
+          <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+        </div>
+        <div class="mb-4">
+          <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
+          <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+        </div>
+        <div class="mb-4">
+          <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
+          <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+        </div>
+        <button type="button" id="save-changes" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
+      </form>
+    </div>
+  `;
+
+      const saveChangesBtn = document.getElementById("save-changes");
+      saveChangesBtn.addEventListener("click", () => {
+        const profilePic = document.getElementById("profile-pic").files[0];
+        const oldPassword = document.getElementById("old-password").value;
+        const newPassword = document.getElementById("new-password").value;
+        const confirmPassword = document.getElementById("confirm-password").value;
+
+        if (newPassword !== confirmPassword) {
+          alert("New passwords do not match!");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("profilePic", profilePic);
+        formData.append("oldPassword", oldPassword);
+        formData.append("newPassword", newPassword);
+
+        fetch("update_profile.php", {
+            method: "POST",
+            body: formData,
+          })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              alert("Profile updated successfully!");
+            } else {
+              alert(data.message || "Error updating profile.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      });
     });
 
     logoutBtn.addEventListener("click", () => {
-      window.location.href = "../login.php";
+      window.location.href = "logout.php";
     });
   </script>
 </body>

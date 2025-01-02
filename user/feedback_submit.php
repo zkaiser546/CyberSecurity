@@ -7,19 +7,17 @@ function checkUserSession() {
 }
 
 function generateFeedbackId($conn) {
-    $date = date('Ymd');
-    
-    $sql = "SELECT feedback_dD FROM feedback WHERE feedback_dD LIKE 'FB" . $date . "%' ORDER BY feedback_dD DESC LIMIT 1";
+    $sql = "SELECT feedback_dD FROM feedback ORDER BY feedback_dD DESC LIMIT 1";
     $result = $conn->query($sql);
     
     if ($result && $result->num_rows > 0) {
         $lastId = $result->fetch_assoc()['feedback_dD'];
-        $sequence = intval(substr($lastId, -3)) + 1;
+        $sequence = intval(substr($lastId, 2)) + 1;
     } else {
         $sequence = 1;
     }
     
-    return 'FB' . $date . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+    return 'FB' . str_pad($sequence, 8, '0', STR_PAD_LEFT);
 }
 
 
