@@ -46,6 +46,31 @@ $sqlAdmin = "CREATE TABLE IF NOT EXISTS admin (
     status VARCHAR(50) NOT NULL
 )";
 
+$plainPassword = 'admin001';
+$hashedPassword = hash('sha3-512', $plainPassword);
+
+$insertQueryAdmin = "INSERT INTO admin (admin_id, username, email, password, image, status)
+SELECT 
+    'AD001',
+    'admin001',
+    'admin001@gmail.com',
+    '$hashedPassword',
+    NULL,
+    'Active'
+WHERE NOT EXISTS (
+    SELECT 1 FROM admin WHERE username = 'admin001'
+)";
+
+if ($conn->query($insertQueryAdmin) === TRUE) {
+    if ($conn->affected_rows > 0) {
+        echo "Admin created successfully";
+    } else {
+        echo " Admin already exists";
+    }
+} else {
+    echo "Error: " . $conn->error;
+}
+
 // Create Users table if it doesn't exist
 $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(20) PRIMARY KEY,
@@ -88,6 +113,13 @@ $sqlLogs = "CREATE TABLE IF NOT EXISTS admin_logs (
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE CASCADE,
     FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD) ON DELETE CASCADE
 )";
+$sqlRBAC = "CREATE TABLE IF NOT EXISTS accessControl (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id VARCHAR(50) NULL,
+    manage_user ENUM('Enabled', 'Disabled') DEFAULT 'Disabled',
+    granted_date DATETIME NULL,
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id) 
+)"; 
 $plainPassword = 'admin2025';
 $hashedPassword = hash('sha3-512', $plainPassword);
 
@@ -122,7 +154,8 @@ $tables = [
     'Users' => $sqlUsers,
     'Feedback' => $sqlFeedback,
     'Verification Codes' => $sqlReset,
-    'Admin Logs' => $sqlLogs
+    'Admin Logs' => $sqlLogs,
+    'Access Control' => $sqlRBAC
 ];
 
 foreach ($tables as $tableName => $query) {

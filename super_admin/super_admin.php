@@ -2,6 +2,11 @@
 session_start();
 
 include '../database/dbConnect.php';
+if (!isset($_SESSION['spAd_ID'])) {
+  header("Location: ../login.php");
+  exit();
+}
+
 $sql = "SELECT SpAd_ID, Email, Password, Image, Status, Role FROM SupAdmin ";
 $result = $conn->query($sql);
 
@@ -42,6 +47,12 @@ $data = $result4->fetch_assoc();
 $totalFeedbacks = $data['total_feedbacks'] ?? 0;
 $averageStars = $data['average_stars'] ?? 0;
 
+                // Fetch admin data along with their access control status
+$sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user 
+         FROM admin 
+         LEFT JOIN accessControl ON admin.admin_id = accessControl.admin_id";
+         $result5 = $conn->query($sql4);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,6 +61,8 @@ $averageStars = $data['average_stars'] ?? 0;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Super Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js"></script>
   <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
@@ -117,6 +130,35 @@ $averageStars = $data['average_stars'] ?? 0;
       max-width: 500px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
+
+   select.form-control {
+    width: 150px;
+    padding: 8px;
+    background-color: #2d3748;
+    color: #fff;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+select.form-control:focus {
+    background-color: #4a5568;
+    border-color: #63b3ed;
+    outline: none;
+}
+input,
+    textarea {
+      background-color: #1c1f26;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
   </style>
 </head>
 <body class="flex h-screen">
@@ -134,6 +176,9 @@ $averageStars = $data['average_stars'] ?? 0;
         </button>
         <button id="view-reports-btn" class="block w-full text-left px-6 py-3 text-white hover:bg-gray-700 transition">
           View Reports
+        </button>
+        <button id="access-control-btn" class="block w-full text-left px-6 py-3 text-white hover:bg-gray-700 transition">
+          Access Control
         </button>
       </nav>
     </div>
@@ -176,6 +221,8 @@ $averageStars = $data['average_stars'] ?? 0;
 
   <!-- JavaScript -->
   <script>
+ const setupProfileBtn = document.getElementById("setup-profile-btn");
+
     document.addEventListener("DOMContentLoaded", () => {
       const contentArea = document.getElementById("content-area");
 
@@ -186,33 +233,173 @@ $averageStars = $data['average_stars'] ?? 0;
         profileDropdown.classList.toggle("hidden");
       });
 
-      // Setup Profile Functionality
-      document.getElementById("setup-profile-btn").addEventListener("click", () => {
-        contentArea.innerHTML = `
-          <div class="content-card p-8">
-            <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
-            <form id="setup-profile-form">
-              <div class="mb-4">
-                <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
-                <input type="file" id="profile-pic" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
-              </div>
-              <div class="mb-4">
-                <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
-                <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
-              </div>
-              <div class="mb-4">
-                <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
-                <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
-              </div>
-              <div class="mb-4">
-                <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm Password</label>
-                <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-md">
-              </div>
-              <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
-            </form>
+  // Setup Profile Functionality
+    setupProfileBtn.addEventListener("click", () => {
+      const contentArea = document.getElementById("content-area");
+      contentArea.innerHTML = `
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
+      <form id="profile-form">
+        <div class="mb-4">
+          <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
+          <input type="file" id="profile-pic" accept="image/*" class="block w-full mt-1 px-4 py-2 border rounded-md">
+        </div>
+      <div class="mb-6 relative">
+          <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
+          <div class="relative">
+            <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('old-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
           </div>
-        `;
+        </div>
+        <div class="mb-6 relative">
+          <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
+          <div class="relative">
+            <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('new-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
+        </div>
+        <div class="mb-6 relative">
+          <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
+          <div class="relative">
+            <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('confirm-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
+        </div>
+        <button type="button" id="save-changes" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
+      </form>
+    </div>
+  `;
+
+      const saveChangesBtn = document.getElementById("save-changes");
+      saveChangesBtn.addEventListener("click", async () => {
+        try {
+          const profilePic = document.getElementById("profile-pic").files[0];
+          const oldPassword = document.getElementById("old-password").value;
+          const newPassword = document.getElementById("new-password").value;
+          const confirmPassword = document.getElementById("confirm-password").value;
+
+          // Validate inputs
+          if (!validateInputs(oldPassword, newPassword, confirmPassword)) {
+            return;
+          }
+
+          Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we update your profile.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          // Encrypt passwords using SHA3-512
+          const hashedOldPassword = sha3_512(oldPassword);
+          const hashedNewPassword = sha3_512(newPassword);
+
+          const formData = new FormData();
+          if (profilePic) {
+            formData.append("profilePic", profilePic);
+          }
+          formData.append("oldPassword", hashedOldPassword);
+          formData.append("newPassword", hashedNewPassword);
+
+          const response = await fetch("changePass.php", {
+            method: "POST",
+            body: formData,
+          });
+
+          // First try to get the response as text
+          const responseText = await response.text();
+
+          let result;
+          try {
+            // Then parse the text as JSON
+            result = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('JSON Parse Error:', responseText);
+            throw new Error('Invalid server response format');
+          }
+
+          if (result.success) {
+            await Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message,
+              showConfirmButton: false,
+              timer: 1500
+            });
+            clearForm();
+          } else {
+            throw new Error(result.message || 'Unknown error occurred');
+          }
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error updating profile. Please try again.'
+          });
+        }
       });
+    });
+
+    function validateInputs(oldPassword, newPassword, confirmPassword) {
+      if (!oldPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter your current password.'
+        });
+        return false;
+      }
+
+      if (!newPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter a new password.'
+        });
+        return false;
+      }
+
+      if (newPassword.length < 8) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New password must be at least 8 characters long.'
+        });
+        return false;
+      }
+
+      if (newPassword !== confirmPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New passwords do not match!'
+        });
+        return false;
+      }
+
+      return true;
+    }
+
+    function clearForm() {
+      document.getElementById("profile-pic").value = "";
+      document.getElementById("old-password").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("confirm-password").value = "";
+    }
+    
+     
+
 
       // Logout Functionality
       document.getElementById("logout-btn").addEventListener("click", () => {
@@ -330,6 +517,51 @@ $averageStars = $data['average_stars'] ?? 0;
       </div>
     `;
   }
+ if (event.target.id === "access-control-btn") {
+    // View Access Control Tab
+    contentArea.innerHTML = `
+      <div class="content-card p-8">
+        <h2 class="text-3xl font-bold text-white mb-4">Access Control</h2>
+        <form id="accessControlForm" method="POST" action="save_access_control.php">
+          <table class="w-full bg-gray-900 rounded-lg">
+            <thead class="bg-gray-800">
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Manage User</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+             <?php
+
+
+                // Loop through the results to display in the table
+                while ($row = $result5->fetch_assoc()) {
+                    echo "<tr>";
+                    echo "<td>" . $row['admin_id'] . "</td>";
+                    echo "<td>" . $row['username'] . "</td>";
+                    echo "<td>
+                        <select name='access_control_".$row['admin_id']."' class='form-control'>
+                            <option value='Enabled' " . ($row['manage_user'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
+                            <option value='Disabled' " . ($row['manage_user'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
+                        </select>
+                    </td>";
+                    echo "<td>
+                        <button type='submit' class='text-blue-400 save-btn' name='save_".$row['admin_id']."' data-user-id='".$row['admin_id']."'>
+                            Save
+                        </button>
+                    </td>";
+                    echo "</tr>";
+                }
+             ?>
+            </tbody>
+          </table>
+        </form>
+      </div>
+    `;
+}
+
 });
 
 //edit user
