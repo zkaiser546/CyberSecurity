@@ -7,11 +7,14 @@ try {
     if (!isset($_SESSION['user_ID'])) {
         throw new Exception('Authentication required');
     }
-
-    $stmt = $conn->prepare("SELECT feedback_dD, feedback_text, stars, display_name, 
+    
+    $userId = $_SESSION['user_ID'];
+    $stmt = $conn->prepare("SELECT feedback_dD, feedback_text, stars, 
                            DATE_FORMAT(created_at, '%Y-%m-%d') as created_at 
                            FROM feedback 
+                           WHERE user_id = ?
                            ORDER BY feedback_dD DESC");
+    $stmt->bind_param("s", $userId);  // Changed from "i" to "s" for VARCHAR
     $stmt->execute();
     $result = $stmt->get_result();
     

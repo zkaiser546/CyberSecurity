@@ -6,6 +6,23 @@ if (!isset($_SESSION['user_ID'])) {
   exit();
 }
 
+// Fetch user details
+$user_id = $_SESSION['user_ID'];
+$sql = "SELECT username, image FROM users WHERE user_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+    $username = $user['username'];
+    $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg'; 
+} else {
+    $username = "Unknown User";
+    $image = 'uploads/default_profile.jpg'; 
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -18,6 +35,8 @@ if (!isset($_SESSION['user_ID'])) {
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha3/0.8.0/sha3.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="icon" href="../Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
     body {
@@ -140,8 +159,8 @@ if (!isset($_SESSION['user_ID'])) {
       <h1 class="text-xl font-bold tracking-wide uppercase text-white">Dashboard</h1>
       <div class="relative">
         <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
-          <img src="https://via.placeholder.com/40" alt="Profile" class="w-10 h-10">
-          <span>John Doe</span>
+        <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+          <span><?php echo htmlspecialchars($username); ?></span>
         </button>
         <!-- Dropdown -->
         <div id="profile-dropdown" class="profile-dropdown hidden absolute top-14 right-0 w-48 bg-gray-800 rounded-lg shadow-md">
@@ -408,19 +427,37 @@ if (!isset($_SESSION['user_ID'])) {
       <form id="profile-form">
         <div class="mb-4">
           <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
-          <input type="file" id="profile-pic" class="block w-full mt-1 px-4 py-2 border rounded-md">
+          <input type="file" id="profile-pic" accept="image/*" class="block w-full mt-1 px-4 py-2 border rounded-md">
         </div>
-        <div class="mb-4">
+      <div class="mb-6 relative">
           <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
-          <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+          <div class="relative">
+            <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('old-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
         </div>
-        <div class="mb-4">
+        <div class="mb-6 relative">
           <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
-          <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+          <div class="relative">
+            <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('new-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
         </div>
-        <div class="mb-4">
+        <div class="mb-6 relative">
           <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
-          <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+          <div class="relative">
+            <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('confirm-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
         </div>
         <button type="button" id="save-changes" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
       </form>
@@ -428,39 +465,139 @@ if (!isset($_SESSION['user_ID'])) {
   `;
 
       const saveChangesBtn = document.getElementById("save-changes");
-      saveChangesBtn.addEventListener("click", () => {
-        const profilePic = document.getElementById("profile-pic").files[0];
-        const oldPassword = document.getElementById("old-password").value;
-        const newPassword = document.getElementById("new-password").value;
-        const confirmPassword = document.getElementById("confirm-password").value;
+      saveChangesBtn.addEventListener("click", async () => {
+        try {
+          const profilePic = document.getElementById("profile-pic").files[0];
+          const oldPassword = document.getElementById("old-password").value;
+          const newPassword = document.getElementById("new-password").value;
+          const confirmPassword = document.getElementById("confirm-password").value;
 
-        if (newPassword !== confirmPassword) {
-          alert("New passwords do not match!");
-          return;
-        }
+          // Validate inputs
+          if (!validateInputs(oldPassword, newPassword, confirmPassword)) {
+            return;
+          }
 
-        const formData = new FormData();
-        formData.append("profilePic", profilePic);
-        formData.append("oldPassword", oldPassword);
-        formData.append("newPassword", newPassword);
+          Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we update your profile.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
 
-        fetch("update_profile.php", {
+          // Encrypt passwords using SHA3-512
+          const hashedOldPassword = sha3_512(oldPassword);
+          const hashedNewPassword = sha3_512(newPassword);
+
+          const formData = new FormData();
+          if (profilePic) {
+            formData.append("profilePic", profilePic);
+          }
+          formData.append("oldPassword", hashedOldPassword);
+          formData.append("newPassword", hashedNewPassword);
+
+          const response = await fetch("update_profile.php", {
             method: "POST",
             body: formData,
-          })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              alert("Profile updated successfully!");
-            } else {
-              alert(data.message || "Error updating profile.");
-            }
-          })
-          .catch((error) => {
-            console.error("Error:", error);
           });
+
+          // First try to get the response as text
+          const responseText = await response.text();
+
+          let result;
+          try {
+            // Then parse the text as JSON
+            result = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('JSON Parse Error:', responseText);
+            throw new Error('Invalid server response format');
+          }
+
+          if (result.success) {
+            await Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message,
+              showConfirmButton: false,
+              timer: 1500
+            });
+            clearForm();
+          } else {
+            throw new Error(result.message || 'Unknown error occurred');
+          }
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error updating profile. Please try again.'
+          });
+        }
       });
     });
+
+    function validateInputs(oldPassword, newPassword, confirmPassword) {
+      if (!oldPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter your current password.'
+        });
+        return false;
+      }
+
+      if (!newPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter a new password.'
+        });
+        return false;
+      }
+
+      if (newPassword.length < 8) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New password must be at least 8 characters long.'
+        });
+        return false;
+      }
+
+      if (newPassword !== confirmPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New passwords do not match!'
+        });
+        return false;
+      }
+
+      return true;
+    }
+
+    function clearForm() {
+      document.getElementById("profile-pic").value = "";
+      document.getElementById("old-password").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("confirm-password").value = "";
+    }
+
+    window.togglePasswordVisibility = (inputId) => {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling; // The button is directly after the input
+      const icon = button.querySelector("i");
+
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    };
 
     logoutBtn.addEventListener("click", () => {
       window.location.href = "logout.php";

@@ -15,6 +15,15 @@ require './vendor/phpmailer/phpmailer/src/SMTP.php';
 
 session_start();
 
+function validatePassword($password) {
+  if (strlen($password) < 8) return false;
+  if (!preg_match('/[A-Z]/', $password)) return false;
+  if (!preg_match('/[a-z]/', $password)) return false;
+  if (!preg_match('/[0-9]/', $password)) return false;
+  if (!preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password)) return false;
+  return true;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
   header('Content-Type: application/json');
   ob_start();
@@ -24,6 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
       $email = trim($_POST['email'] ?? '');
       $password = $_POST['password'] ?? '';
       $confirm_password = $_POST['confirm_password'] ?? '';
+
+      if (!validatePassword($password)) {
+        throw new Exception('Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character.');
+    }
+
 
 
       $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?");
