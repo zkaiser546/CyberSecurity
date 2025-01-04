@@ -6,9 +6,21 @@ if (!isset($_SESSION['spAd_ID'])) {
   header("Location: ../login.php");
   exit();
 }
+$sup_id = $_SESSION['spAd_ID'];
+$sql = "SELECT username, image FROM supadmin WHERE spAd_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $sup_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-$sql = "SELECT SpAd_ID, Email, Password, Image, Status, Role FROM SupAdmin ";
-$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+    $username = $user['username'];
+    $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg'; 
+} else {
+    $username = "Unknown User";
+    $image = 'uploads/default_profile.jpg'; 
+}
 
 
 
@@ -63,6 +75,7 @@ $sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
 
@@ -180,18 +193,27 @@ select {
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* Add a subtle focus ring */
   }
 
-  /* Option Styling */
+  
   option {
-    background-color: #1f2937; /* Match dropdown color */
-    color: #ffffff; /* Match text color */
+    background-color: #1f2937; 
+    color: #ffffff; 
   }
 
-  /* Disabled Styling */
+  
   select:disabled {
-    background-color: #374151; /* Dimmed background */
-    cursor: not-allowed; /* Not-allowed cursor */
-    color: #9ca3af; /* Gray text */
+    background-color: #374151; 
+    cursor: not-allowed; 
+    color: #9ca3af; 
   }
+  #profile-dropdown-btn span {
+  font-size: 0.875rem; /* Small and clean typography */
+  font-weight: 600;    /* Slightly bold for emphasis */
+  color: #e5e7eb;      /* Light gray for a softer look */
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+  letter-spacing: 0.5px; /* Slight spacing for readability */
+  text-transform: uppercase; /* To give a professional, admin-like vibe */
+}
+
 input,
     textarea {
       background-color: #1c1f26;
@@ -239,8 +261,9 @@ input,
       <h1 class="text-xl font-bold tracking-wide uppercase text-white">Super Admin Dashboard</h1>
       <div class="relative">
         <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
-          <img src="https://via.placeholder.com/40" alt="Profile" class="w-10 h-10">
-          <span>Super Admin</span>
+          <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+          <span>SUPER ADMIN</span>
+        
         </button>
         <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-md">
           <button id="setup-profile-btn" class="block w-full px-4 py-2 text-left text-white hover:bg-gray-700">Setup Profile</button>
@@ -265,6 +288,7 @@ input,
   <!-- JavaScript -->
   <script>
  const setupProfileBtn = document.getElementById("setup-profile-btn");
+  const logoutBtn = document.getElementById("logout-btn");
 
     document.addEventListener("DOMContentLoaded", () => {
       const contentArea = document.getElementById("content-area");
@@ -440,14 +464,28 @@ input,
       document.getElementById("new-password").value = "";
       document.getElementById("confirm-password").value = "";
     }
-    
+    window.togglePasswordVisibility = (inputId) => {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling; // The button is directly after the input
+      const icon = button.querySelector("i");
+
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    };
      
 
 
       // Logout Functionality
-      document.getElementById("logout-btn").addEventListener("click", () => {
-        window.location.href = "../login.php";
-      });
+    logoutBtn.addEventListener("click", () => {
+      window.location.href = "sa_logout.php";
+    });
 
 
       
