@@ -76,7 +76,7 @@ $sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
+  <link rel="icon" href="../Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
 
     body {
