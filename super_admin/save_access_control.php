@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
     }
+    
 
     // After saving, redirect back to the access control page
     header("Location: super_admin.php"); // Change the URL to your actual access control page

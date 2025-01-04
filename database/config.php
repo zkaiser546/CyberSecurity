@@ -120,6 +120,7 @@ $sqlRBAC = "CREATE TABLE IF NOT EXISTS accessControl (
     granted_date DATETIME NULL,
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) 
 )"; 
+
 $plainPassword = 'admin2025';
 $hashedPassword = hash('sha3-512', $plainPassword);
 
