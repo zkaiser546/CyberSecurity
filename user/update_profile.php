@@ -11,14 +11,14 @@ if (!isset($_SESSION['user_ID'])) {
 
 // Ensure no output before setting headers
 ob_start();
-function validatePassword($password) {
+/*function validatePassword($password) {
     if (strlen($password) < 8) return false;
     if (!preg_match('/[A-Z]/', $password)) return false;
     if (!preg_match('/[a-z]/', $password)) return false;
     if (!preg_match('/[0-9]/', $password)) return false;
     if (!preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password)) return false;
     return true;
-} 
+} */
 
 try {
     // Validate request method
@@ -37,9 +37,9 @@ try {
         throw new Exception('Missing required password fields');
     }
 
-    if (!validatePassword($newPassword)) {
+   /* if (!validatePassword($newPassword)) {
         throw new Exception('Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character.');
-    }
+    }*/
     // Verify old password
     $stmt = $conn->prepare("SELECT password FROM users WHERE user_id = ? AND password = ?");
     $stmt->bind_param("ss", $userId, $oldPassword); 

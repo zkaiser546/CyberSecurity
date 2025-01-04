@@ -6,9 +6,21 @@ if (!isset($_SESSION['spAd_ID'])) {
   header("Location: ../login.php");
   exit();
 }
+$sup_id = $_SESSION['spAd_ID'];
+$sql = "SELECT username, image FROM supadmin WHERE spAd_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $sup_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-$sql = "SELECT SpAd_ID, Email, Password, Image, Status, Role FROM SupAdmin ";
-$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+    $username = $user['username'];
+    $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg'; 
+} else {
+    $username = "Unknown User";
+    $image = 'uploads/default_profile.jpg'; 
+}
 
 
 
@@ -63,9 +75,10 @@ $sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js"></script>
-  <link rel="icon" href="Logo/Feedback_Logo.png" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="icon" href="../Logo/Feedback_Logo.png" type="image/x-icon">
   <style>
-    
+
     body {
       background: linear-gradient(135deg, #1c1f26, #2b303b);
       color: white;
@@ -112,26 +125,6 @@ $sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
       color: #d1d5db;
     }
 
-    /* Modal Styles */
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: rgba(0, 0, 0, 0.7);
-      z-index: 50;
-    }
-
-    .modal-content {
-      background-color: #2a2f3b;
-      border-radius: 8px;
-      padding: 2rem;
-      width: 90%;
-      max-width: 500px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-
    select.form-control {
     width: 150px;
     padding: 8px;
@@ -148,6 +141,59 @@ select.form-control:focus {
     border-color: #63b3ed;
     outline: none;
 }
+select {
+    appearance: none; 
+    background-color: #1f2937; 
+    color: #ffffff; 
+    border: 1px solid #374151; 
+    border-radius: 0.375rem; 
+    padding: 0.5rem 2rem 0.5rem 1rem; 
+    width: 100%; 
+    font-size: 1rem; 
+    font-family: inherit; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+  }
+
+  
+  select::after {
+    content: '▾'; 
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #ffffff;
+  }
+
+  
+  select:focus {
+    outline: none; 
+    border-color: #60a5fa; 
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); 
+  }
+
+  
+  option {
+    background-color: #1f2937; 
+    color: #ffffff; 
+  }
+
+  
+  select:disabled {
+    background-color: #374151; 
+    cursor: not-allowed; 
+    color: #9ca3af; 
+  }
+  #profile-dropdown-btn span {
+  font-size: 0.875rem; 
+  font-weight: 600;    
+  color: #e5e7eb;     
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); 
+  letter-spacing: 0.5px; 
+  text-transform: uppercase; 
+}
+
 input,
     textarea {
       background-color: #1c1f26;
@@ -195,8 +241,9 @@ input,
       <h1 class="text-xl font-bold tracking-wide uppercase text-white">Super Admin Dashboard</h1>
       <div class="relative">
         <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
-          <img src="https://via.placeholder.com/40" alt="Profile" class="w-10 h-10">
-          <span>Super Admin</span>
+          <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+          <span>SUPER ADMIN</span>
+        
         </button>
         <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-md">
           <button id="setup-profile-btn" class="block w-full px-4 py-2 text-left text-white hover:bg-gray-700">Setup Profile</button>
@@ -214,15 +261,14 @@ input,
     </main>
     
   </div>
-  <!-- Edit User Modal -->
-
-<!-- Edit User Modal -->
+  
 
 
 
   <!-- JavaScript -->
   <script>
  const setupProfileBtn = document.getElementById("setup-profile-btn");
+  const logoutBtn = document.getElementById("logout-btn");
 
     document.addEventListener("DOMContentLoaded", () => {
       const contentArea = document.getElementById("content-area");
@@ -398,21 +444,32 @@ input,
       document.getElementById("new-password").value = "";
       document.getElementById("confirm-password").value = "";
     }
-    
+    window.togglePasswordVisibility = (inputId) => {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling; 
+      const icon = button.querySelector("i");
+
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    };
      
 
 
       // Logout Functionality
-      document.getElementById("logout-btn").addEventListener("click", () => {
-        window.location.href = "../login.php";
-      });
-
-
-      
+    logoutBtn.addEventListener("click", () => {
+      window.location.href = "sa_logout.php";
+    });
 
 
       // Manage Users Tab
-    document.addEventListener("click", (event) => {
+ document.addEventListener("click", async (event) => {
   if (event.target.id === "manage-users-btn") {
     // Manage Users Tab
     contentArea.innerHTML = `
@@ -428,7 +485,7 @@ input,
               <th>Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="user-table-body">
             <?php
             if ($result1->num_rows > 0) {
               while ($row = $result1->fetch_assoc()) {
@@ -455,6 +512,77 @@ input,
       </div>
     `;
   }
+   // Handle Edit Button Click
+  if (event.target.classList.contains("edit-btn")) {
+    const userId = event.target.getAttribute("data-user-id");
+
+    // Fetch user details via AJAX or Fetch API
+    const response = await fetch(`getUserDetails.php?user_ID=${userId}`);
+    const user = await response.json();
+
+    if (user) {
+      contentArea.innerHTML = `
+        <div class="content-card p-8">
+          <h2 class="text-3xl font-bold text-white mb-4">Edit User</h2>
+          <form id="edit-user-form">
+            <input type="hidden" id="edit-user-id" value="${user.user_ID}">
+            <div class="mb-4">
+              <label for="edit-username" class="block text-sm font-medium text-gray-300">Full Name</label>
+              <input type="text" id="edit-username" value="${user.username}" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            </div>
+            <div class="mb-4">
+              <label for="edit-email" class="block text-sm font-medium text-gray-300">Email</label>
+              <input type="email" id="edit-email" value="${user.email}" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            </div>
+            <div class="mb-4">
+              <label for="edit-status" class="block text-sm font-medium text-gray-300">Status</label>
+              <select id="edit-status" class="block w-full mt-1 px-4 py-2 border rounded-md">
+                <option value="Active" ${user.status === "Active" ? "selected" : ""}>Active</option>
+                <option value="Inactive" ${user.status === "Inactive" ? "selected" : ""}>Inactive</option>
+              </select>
+            </div>
+            <button type="button" id="save-user-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
+          </form>
+        </div>
+      `;
+    }
+  }
+   if (event.target.id === "save-user-btn") {
+    const userId = document.getElementById("edit-user-id").value;
+    const username = document.getElementById("edit-username").value;
+    const email = document.getElementById("edit-email").value;
+    const status = document.getElementById("edit-status").value;
+
+    // Send updated data to the server via Fetch API
+    const response = await fetch("updateUser.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_ID: userId, username, email, status }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      Swal.fire({
+        icon: "success",
+        title: "User updated successfully!",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+
+      // Reload the Manage Users tab
+      document.getElementById("manage-users-btn").click();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: result.message || "Failed to update user.",
+      });
+    }
+  }
+
 
   if (event.target.id === "view-logs-btn") {
     // View Logs Tab
@@ -509,7 +637,7 @@ input,
           </thead>
           <tbody>
             <tr>
-              <td><?php echo date('F'); // Current month in full (e.g., "December") ?></td>
+              <td><?php echo date('F');?></td>
               <td><?php echo $totalFeedbacks; ?></td>
               <td><?php echo $averageStars; ?></td>
             </tr>
@@ -564,67 +692,6 @@ input,
 }
 
 });
-
-//edit user
-/*document.addEventListener("DOMContentLoaded", () => {
-  const editModal = document.getElementById("edit-modal");
-  const cancelEdit = document.getElementById("cancel-edit");
-
-  // Open the modal when an Edit button is clicked (already handled in your script)
-  document.addEventListener("click", (event) => {
-    if (event.target.classList.contains("edit-btn")) {
-      const userId = event.target.getAttribute("data-user-id");
-
-      // Fetch the user's data (AJAX or fetch API)
-      fetch(`getUserDetails.php?user_ID=${userId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          document.getElementById("edit-user-id").value = data.user_ID;
-          document.getElementById("edit-firstname").value = data.firstname;
-          document.getElementById("edit-lastname").value = data.lastname;
-          document.getElementById("edit-email").value = data.email;
-          document.getElementById("edit-status").value = data.status;
-
-          // Show the modal
-          editModal.classList.remove("hidden");
-        })
-        .catch((error) => console.error("Error fetching user details:", error));
-    }
-  });
-
-  // Close the modal when the Cancel button is clicked
-  cancelEdit.addEventListener("click", () => {
-    editModal.classList.add("hidden");
-  });
-
-  // Handle the form submission
-  document.getElementById("edit-user-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-
-    // Collect form data
-    const formData = new FormData(e.target);
-
-    // Send updated data to the server
-    fetch("updateUser.php", {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          alert("User updated successfully!");
-          editModal.classList.add("hidden");
-          // Optionally, refresh the user table or update it dynamically
-        } else {
-          alert("Error updating user: " + data.message);
-        }
-      })
-      .catch((error) => console.error("Error updating user:", error));
-  });
-});*/
-
-
-     
 
     });
   </script>
