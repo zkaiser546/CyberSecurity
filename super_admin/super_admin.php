@@ -142,22 +142,22 @@ select.form-control:focus {
     outline: none;
 }
 select {
-    appearance: none; /* Remove default browser styles */
-    background-color: #1f2937; /* Dark background color */
-    color: #ffffff; /* Text color */
-    border: 1px solid #374151; /* Border color */
-    border-radius: 0.375rem; /* Rounded corners */
-    padding: 0.5rem 2rem 0.5rem 1rem; /* Padding (with room for arrow) */
-    width: 100%; /* Full width */
-    font-size: 1rem; /* Font size */
-    font-family: inherit; /* Inherit the font */
-    cursor: pointer; /* Show pointer cursor */
-    transition: all 0.3s ease; /* Smooth hover effects */
+    appearance: none; 
+    background-color: #1f2937; 
+    color: #ffffff; 
+    border: 1px solid #374151; 
+    border-radius: 0.375rem; 
+    padding: 0.5rem 2rem 0.5rem 1rem; 
+    width: 100%; 
+    font-size: 1rem; 
+    font-family: inherit; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
   }
 
-  /* Dropdown Arrow */
+  
   select::after {
-    content: '▾'; /* Downward arrow symbol */
+    content: '▾'; 
     position: absolute;
     right: 1rem;
     top: 50%;
@@ -166,11 +166,11 @@ select {
     color: #ffffff;
   }
 
-  /* On Focus */
+  
   select:focus {
-    outline: none; /* Remove default focus outline */
-    border-color: #60a5fa; /* Highlight border on focus */
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* Add a subtle focus ring */
+    outline: none; 
+    border-color: #60a5fa; 
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); 
   }
 
   
@@ -186,12 +186,12 @@ select {
     color: #9ca3af; 
   }
   #profile-dropdown-btn span {
-  font-size: 0.875rem; /* Small and clean typography */
-  font-weight: 600;    /* Slightly bold for emphasis */
-  color: #e5e7eb;      /* Light gray for a softer look */
-  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
-  letter-spacing: 0.5px; /* Slight spacing for readability */
-  text-transform: uppercase; /* To give a professional, admin-like vibe */
+  font-size: 0.875rem; 
+  font-weight: 600;    
+  color: #e5e7eb;     
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); 
+  letter-spacing: 0.5px; 
+  text-transform: uppercase; 
 }
 
 input,
@@ -446,7 +446,7 @@ input,
     }
     window.togglePasswordVisibility = (inputId) => {
       const input = document.getElementById(inputId);
-      const button = input.nextElementSibling; // The button is directly after the input
+      const button = input.nextElementSibling; 
       const icon = button.querySelector("i");
 
       if (input.type === "password") {
@@ -637,7 +637,7 @@ input,
           </thead>
           <tbody>
             <tr>
-              <td><?php echo date('F'); // Current month in full (e.g., "December") ?></td>
+              <td><?php echo date('F');?></td>
               <td><?php echo $totalFeedbacks; ?></td>
               <td><?php echo $averageStars; ?></td>
             </tr>
