@@ -1,3 +1,31 @@
+<?php
+include "../database/dbConnect.php";
+
+// Fetch feedback and user details
+$sql = "
+    SELECT 
+        f.feedback_dD, 
+        f.feedback_text, 
+        f.stars, 
+        f.display_name, 
+        f.created_at, 
+        u.user_id, 
+        u.username, 
+        u.email
+    FROM 
+        feedback f
+    INNER JOIN 
+        users u
+    ON 
+        f.user_id = u.user_id
+    ORDER BY 
+        f.created_at DESC
+";
+
+$result = $conn->query($sql);
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -153,16 +181,31 @@
                   <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td class="px-6 py-4">101</td>
-                  <td class="px-6 py-4">John Doe</td>
-                  <td class="px-6 py-4 text-yellow-400">★★★★★</td>
-                  <td class="px-6 py-4">Great platform!</td>
-                  <td class="px-6 py-4">
-                    <button class="text-blue-400 hover:underline reply-btn" data-user="John Doe" data-comment="Great platform!">Reply</button>
-                  </td>
-                </tr>
+              <tbody id ="feedback-table-body">
+               <?php
+                if ($result->num_rows > 0) {
+                  while ($row = $result->fetch_assoc()) {
+                      $feedbackDate = htmlspecialchars($row['feedback_dD']);
+                      $username = htmlspecialchars($row['display_name']);
+                      $feedbackText = htmlspecialchars($row['feedback_text']);
+                      $stars = str_repeat("★", $row['stars']) . str_repeat("☆", 5 - $row['stars']);
+                      
+                      echo "
+                      <tr>
+                          <td class='px-6 py-4'>{$feedbackDate}</td>
+                          <td class='px-6 py-4'>{$username}</td>
+                          <td class='px-6 py-4 text-yellow-400'>{$stars}</td>
+                          <td class='px-6 py-4'>{$feedbackText}</td>
+                          <td class='px-6 py-4'>
+                              <button class='text-blue-400 hover:underline reply-btn' data-user='{$username}' data-comment='{$feedbackText}'>Reply</button>
+                          </td>
+                      </tr>
+                      ";
+                  }
+              } else {
+                  echo "<tr><td colspan='5' class='px-6 py-4'>No feedback available.</td></tr>";
+              }
+              ?>
               </tbody>
             </table>
           </div>
