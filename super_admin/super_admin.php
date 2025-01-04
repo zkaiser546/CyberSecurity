@@ -125,26 +125,6 @@ $sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
       color: #d1d5db;
     }
 
-    /* Modal Styles */
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: rgba(0, 0, 0, 0.7);
-      z-index: 50;
-    }
-
-    .modal-content {
-      background-color: #2a2f3b;
-      border-radius: 8px;
-      padding: 2rem;
-      width: 90%;
-      max-width: 500px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-
    select.form-control {
     width: 150px;
     padding: 8px;
@@ -488,9 +468,6 @@ input,
     });
 
 
-      
-
-
       // Manage Users Tab
  document.addEventListener("click", async (event) => {
   if (event.target.id === "manage-users-btn") {
@@ -715,67 +692,6 @@ input,
 }
 
 });
-
-//edit user
-/*document.addEventListener("DOMContentLoaded", () => {
-  const editModal = document.getElementById("edit-modal");
-  const cancelEdit = document.getElementById("cancel-edit");
-
-  // Open the modal when an Edit button is clicked (already handled in your script)
-  document.addEventListener("click", (event) => {
-    if (event.target.classList.contains("edit-btn")) {
-      const userId = event.target.getAttribute("data-user-id");
-
-      // Fetch the user's data (AJAX or fetch API)
-      fetch(`getUserDetails.php?user_ID=${userId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          document.getElementById("edit-user-id").value = data.user_ID;
-          document.getElementById("edit-firstname").value = data.firstname;
-          document.getElementById("edit-lastname").value = data.lastname;
-          document.getElementById("edit-email").value = data.email;
-          document.getElementById("edit-status").value = data.status;
-
-          // Show the modal
-          editModal.classList.remove("hidden");
-        })
-        .catch((error) => console.error("Error fetching user details:", error));
-    }
-  });
-
-  // Close the modal when the Cancel button is clicked
-  cancelEdit.addEventListener("click", () => {
-    editModal.classList.add("hidden");
-  });
-
-  // Handle the form submission
-  document.getElementById("edit-user-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-
-    // Collect form data
-    const formData = new FormData(e.target);
-
-    // Send updated data to the server
-    fetch("updateUser.php", {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          alert("User updated successfully!");
-          editModal.classList.add("hidden");
-          // Optionally, refresh the user table or update it dynamically
-        } else {
-          alert("Error updating user: " + data.message);
-        }
-      })
-      .catch((error) => console.error("Error updating user:", error));
-  });
-});*/
-
-
-     
 
     });
   </script>
