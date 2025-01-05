@@ -14,14 +14,13 @@ if (isset($_SESSION['admin_ID'])) {
     if ($updateStmt->execute()) {
         // Unset the user session
         unset($_SESSION['admin_ID']);
-        unset($_SESSION['username']); 
     }
 
     $updateStmt->close();
 }
 
 
-session_destroy();
+
 
 // Redirect to the login page
 header("Location: ../login.php");

@@ -21,8 +21,6 @@ if (isset($_SESSION['user_ID'])) {
 }
 
 
-session_destroy();
-
 // Redirect to the login page
 header("Location: ../login.php");
 exit();

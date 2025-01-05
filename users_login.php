@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $userStmt->execute();
     $userResult = $userStmt->get_result();
 
+
     if ($supadminRow = $supadminResult->fetch_assoc()) {
         if ($password === $supadminRow['password']) {
             $_SESSION['spAd_ID'] = $supadminRow['spAd_ID'];

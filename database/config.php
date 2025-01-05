@@ -104,7 +104,7 @@ $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     image VARCHAR(255) DEFAULT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('Active', 'Inactive'))
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ";
+);";
 
 // Create Feedback table if it doesn't exist
 $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
@@ -115,7 +115,7 @@ $sqlFeedback = "CREATE TABLE IF NOT EXISTS feedback (
     display_name VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-)ENGINE=InnoDB ROW_FORMAT=DYNAMIC CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ";
+);";
 
 // Create verification_codes table
 $sqlReset = "CREATE TABLE IF NOT EXISTS verification_codes (
@@ -132,12 +132,13 @@ $sqlReset = "CREATE TABLE IF NOT EXISTS verification_codes (
 $sqlLogs = "CREATE TABLE IF NOT EXISTS admin_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id VARCHAR(255) NOT NULL,
-    feedback_dD VARCHAR(255) NOT NULL,
+    feedback_dD VARCHAR(255),
     action VARCHAR(255) NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE CASCADE,
     FOREIGN KEY (feedback_dD) REFERENCES feedback(feedback_dD) ON DELETE CASCADE
-)";
+);";
+
 $sqlRBAC = "CREATE TABLE IF NOT EXISTS accessControl (
     id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id VARCHAR(50) NULL,
@@ -181,7 +182,6 @@ if ($conn->query($insertQuery) === TRUE) {
 } else {
     echo "Error: " . $conn->error;
 }
-
 
 // Execute the creation of tables in the correct order
 $tables = [
