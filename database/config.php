@@ -71,6 +71,31 @@ if ($conn->query($insertQueryAdmin) === TRUE) {
     echo "Error: " . $conn->error;
 }
 
+$plainPassword = 'admin002';
+$hashedPassword = hash('sha3-512', $plainPassword);
+
+$insertQueryAdmin = "INSERT INTO admin (admin_id, username, email, password, image, status)
+SELECT 
+    'AD002',
+    'admin002',
+    'admin002@gmail.com',
+    '$hashedPassword',
+    NULL,
+    'Active'
+WHERE NOT EXISTS (
+    SELECT 1 FROM admin WHERE username = 'admin002'
+)";
+
+if ($conn->query($insertQueryAdmin) === TRUE) {
+    if ($conn->affected_rows > 0) {
+        echo "Admin created successfully";
+    } else {
+        echo "Admin already exists";
+    }
+} else {
+    echo "Error: " . $conn->error;
+}
+
 // Create Users table if it doesn't exist
 $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(20) PRIMARY KEY,
