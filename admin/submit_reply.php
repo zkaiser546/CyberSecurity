@@ -60,9 +60,9 @@ try {
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
 
-        if ($checkResult->num_rows > 0) {
-            throw new Exception('A reply already exists for this feedback');
-        }
+       // if ($checkResult->num_rows > 0) {
+         //   throw new Exception('A reply already exists for this feedback');
+        //}
 
         $replyId = generateReplyId($conn);
         
