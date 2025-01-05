@@ -156,8 +156,20 @@ include '../database/dbConnect.php';
     document.getElementById("view-feedback-btn").addEventListener("click", async () => {
       try {
         const response = await fetch('retrieve_all_feedback.php');
-        const feedbackData = await response.json();
-        const encryptionKey = 'SecureFeedback250';
+        const data = await response.json();
+    
+    // Add debug logging
+    console.log('Response data:', data);
+    
+    // Check if data is valid and convert to array if needed
+    const feedbackData = Array.isArray(data) ? data : Object.values(data);
+    
+    // Verify we have valid feedback data
+    if (!feedbackData || !feedbackData.length) {
+      throw new Error('No feedback data available');
+    }
+
+    const encryptionKey = 'SecureFeedback250';
 
         let tableRows = feedbackData.map(item => {
           const decryptedText = decryptFeedback(item.feedback_text, encryptionKey);
