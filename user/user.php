@@ -15,19 +15,18 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-    $username = $user['username'];
-    $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg'; 
+  $user = $result->fetch_assoc();
+  $username = $user['username'];
+  $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg';
 } else {
-    $username = "Unknown User";
-    $image = 'uploads/default_profile.jpg'; 
+  $username = "Unknown User";
+  $image = 'uploads/default_profile.jpg';
 }
 
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -159,7 +158,7 @@ if ($result->num_rows > 0) {
       <h1 class="text-xl font-bold tracking-wide uppercase text-white">Dashboard</h1>
       <div class="relative">
         <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
-        <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+          <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
           <span><?php echo htmlspecialchars($username); ?></span>
         </button>
         <!-- Dropdown -->
@@ -349,13 +348,19 @@ if ($result->num_rows > 0) {
     });
     // Decryption function
     const decryptFeedback = (encryptedData, key) => {
-      const iv = CryptoJS.enc.Hex.parse(encryptedData.substr(0, 32));
-      const encrypted = encryptedData.substr(32);
-      return CryptoJS.AES.decrypt(encrypted, key, {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }).toString(CryptoJS.enc.Utf8);
+      if (!encryptedData) return '';
+      try {
+        const iv = CryptoJS.enc.Hex.parse(encryptedData.substr(0, 32));
+        const encrypted = encryptedData.substr(32);
+        return CryptoJS.AES.decrypt(encrypted, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        }).toString(CryptoJS.enc.Utf8);
+      } catch (error) {
+        console.error('Decryption error:', error);
+        return 'Error decrypting message';
+      }
     };
 
     historyBtn.addEventListener("click", async () => {
@@ -365,17 +370,24 @@ if ($result->num_rows > 0) {
         const encryptionKey = 'SecureFeedback250';
 
         let tableRows = feedbackData.map(item => {
-          const decryptedText = decryptFeedback(item.feedback_text, encryptionKey);
+          const decryptedFeedback = decryptFeedback(item.feedback_text, encryptionKey);
+          const decryptedReply = item.reply_text ? decryptFeedback(item.reply_text, encryptionKey) : 'No reply yet';
           const stars = '★'.repeat(parseInt(item.stars));
           const date = new Date(item.created_at).toLocaleDateString();
+          const replyDate = item.reply_date ? new Date(item.reply_date).toLocaleDateString() : '';
 
           return `
         <tr>
           <td class="px-6 py-4">${date}</td>
-          <td class="px-6 py-4">${decryptedText}</td>
+          <td class="px-6 py-4">${item.display_name}</td>
+          <td class="px-6 py-4">${decryptedFeedback}</td>
           <td class="px-6 py-4 text-yellow-400">${stars}</td>
           <td class="px-6 py-4">
-            <button class="text-blue-400 hover:underline view-reply-btn" data-reply="Thank you for your feedback!">View</button>
+            <button class="text-blue-400 hover:underline view-reply-btn" 
+                    data-reply="${decryptedReply}"
+                    data-reply-date="${replyDate}">
+              ${item.reply_text ? 'View Reply' : 'No Reply Yet'}
+            </button>
           </td>
         </tr>
       `;
@@ -383,14 +395,15 @@ if ($result->num_rows > 0) {
 
         contentArea.innerHTML = `
       <div class="content-card p-8">
-        <h2 class="text-3xl font-bold text-white mb-4">History</h2>
+        <h2 class="text-3xl font-bold text-white mb-4">Feedback History</h2>
         <table class="w-full text-left border-collapse bg-gray-900 rounded-lg">
           <thead class="bg-gray-800">
             <tr>
               <th class="px-6 py-3 text-sm font-medium text-gray-400">Date</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Display Name</th>
               <th class="px-6 py-3 text-sm font-medium text-gray-400">Feedback</th>
               <th class="px-6 py-3 text-sm font-medium text-gray-400">Stars</th>
-              <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Reply</th>
             </tr>
           </thead>
           <tbody>
@@ -399,6 +412,30 @@ if ($result->num_rows > 0) {
         </table>
       </div>
     `;
+
+        const viewReplyButtons = document.querySelectorAll(".view-reply-btn");
+        viewReplyButtons.forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            const reply = e.target.dataset.reply;
+            const replyDate = e.target.dataset.replyDate;
+
+            if (reply === 'No reply yet') {
+              modalBody.innerHTML = `
+            <div class="space-y-4">
+              <p class="text-gray-300">No reply has been received yet.</p>
+            </div>
+          `;
+            } else {
+              modalBody.innerHTML = `
+            <div class="space-y-4">
+              <p class="text-gray-300">${reply}</p>
+              ${replyDate ? `<p class="text-sm text-gray-500">Replied on: ${replyDate}</p>` : ''}
+            </div>
+          `;
+            }
+            modal.classList.remove("hidden");
+          });
+        });
       } catch (error) {
         console.error('Error fetching feedback:', error);
         contentArea.innerHTML = `
@@ -408,15 +445,6 @@ if ($result->num_rows > 0) {
       </div>
     `;
       }
-
-      const viewReplyButtons = document.querySelectorAll(".view-reply-btn");
-      viewReplyButtons.forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const reply = e.target.dataset.reply;
-          modalBody.innerHTML = `<p class="text-gray-300">${reply}</p>`;
-          modal.classList.remove("hidden");
-        });
-      });
     });
 
     setupProfileBtn.addEventListener("click", () => {

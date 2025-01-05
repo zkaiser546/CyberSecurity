@@ -121,6 +121,16 @@ $sqlRBAC = "CREATE TABLE IF NOT EXISTS accessControl (
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) 
 )"; 
 
+$sqlFeedbackReplies = "CREATE TABLE IF NOT EXISTS feedback_replies (
+    reply_id VARCHAR(10) PRIMARY KEY,
+    feedback_id VARCHAR(255) NOT NULL,
+    admin_id VARCHAR(255) DEFAULT NULL,
+    reply_text VARCHAR(1000) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_dD) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE SET NULL
+) ";
+
 $plainPassword = 'admin2025';
 $hashedPassword = hash('sha3-512', $plainPassword);
 
@@ -156,7 +166,8 @@ $tables = [
     'Feedback' => $sqlFeedback,
     'Verification Codes' => $sqlReset,
     'Admin Logs' => $sqlLogs,
-    'Access Control' => $sqlRBAC
+    'Access Control' => $sqlRBAC,
+    'Reply' => $sqlFeedbackReplies
 ];
 
 foreach ($tables as $tableName => $query) {
@@ -164,28 +175,6 @@ foreach ($tables as $tableName => $query) {
         echo "Table '$tableName' created successfully<br>";
     } else {
         echo "Error creating $tableName table: " . $conn->error . "<br>";
-    }
-}
-
-$sqlFeedbackReplies = "CREATE TABLE IF NOT EXISTS feedback_replies (
-    reply_id INT AUTO_INCREMENT PRIMARY KEY,
-    feedback_id VARCHAR(255) NOT NULL,
-    user_id VARCHAR(20) DEFAULT NULL,
-    admin_id VARCHAR(255) DEFAULT NULL,
-    reply_text VARCHAR(1000) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_dD) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL,
-    FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE SET NULL
-) ";
-
-$tables['Feedback Replies'] = $sqlFeedbackReplies;
-
-foreach ($tables as $tableName => $query) {
-    if ($conn->query($query) === TRUE) {
-        echo "Table '$tableName' created successfully<br>";
-    } else {
-        echo "Error creating $tableName table: " . $conn->error . " Query: $query<br>";
     }
 }
 

@@ -39,6 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     elseif ($adminRow = $adminResult->fetch_assoc()) {
         if ($password === $adminRow['password']) {
             $_SESSION['admin_ID'] = $adminRow['admin_ID'];
+
+            $updateSql = "UPDATE admin SET status = 'Active' WHERE admin_ID = ?";
+            $updateStmt = $conn->prepare($updateSql);
+            $updateStmt->bind_param("s", $userRow['admin_ID']);
+            $updateStmt->execute();
+            $updateStmt->close();
+            
             $response = ['success' => true, 'redirect' => './admin/admin.php'];
         }
     }
