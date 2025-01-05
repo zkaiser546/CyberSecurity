@@ -3,7 +3,7 @@ session_start();
 include '../database/dbConnect.php';
 
 // Check if user is logged in
-if (!isset($_SESSION['admin_id'])) {
+if (!isset($_SESSION['admin_ID'])) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
@@ -27,7 +27,7 @@ try {
     }
 
     // Get user ID from session
-    $supId = $_SESSION['admin_id'];
+    $supId = $_SESSION['admin_ID'];
 
     // Get and validate password data
     $oldPassword = $_POST['oldPassword'] ?? '';
@@ -41,7 +41,7 @@ try {
         throw new Exception('Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character.');
     }*/
     // Verify old password
-    $stmt = $conn->prepare("SELECT password FROM admin WHERE admin_id = ? AND password = ?");
+    $stmt = $conn->prepare("SELECT password FROM admin WHERE admin_ID = ? AND password = ?");
     $stmt->bind_param("ss", $supId, $oldPassword); 
     $stmt->execute();
     $result = $stmt->get_result();
@@ -86,7 +86,7 @@ try {
         $imagePath = $uploadDir . $filename;
 
         // Delete old profile picture if it exists
-        $query = "SELECT image FROM admin WHERE admin_id = ?";
+        $query = "SELECT image FROM admin WHERE admin_ID = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $supId);
         $stmt->execute();
@@ -110,7 +110,7 @@ try {
         $types .= "s";
     }
 
-    $query .= " WHERE admin_id = ?";
+    $query .= " WHERE admin_ID = ?";
     $params[] = $supId;
     $types .= "s";
 

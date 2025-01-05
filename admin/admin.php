@@ -5,12 +5,70 @@ if (!isset($_SESSION['admin_ID'])) {
   header("Location: ../login.php");
   exit();
 }
-$adminId = $_SESSION['admin_ID']
+
+$adminId = $_SESSION['admin_ID'];
+
+$manageUserEnabled = false; // Default to false
+if ($adminId) {
+  $sql = "SELECT manage_user FROM accessControl WHERE admin_id = ?";
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param("s", $adminId);
+  $stmt->execute();
+  $stmt->bind_result($manageUserStatus);
+  $stmt->fetch();
+  $stmt->close();
+
+  // Check if 'manage_user' is 'Enabled'
+  if ($manageUserStatus === 'Enabled') {
+      $manageUserEnabled = true;
+  }
+}
+$sql1 = "SELECT user_ID, username, email, status
+        FROM users 
+        ORDER BY user_ID DESC";
+        $result1 = $conn->query($sql1);
+
+$sql2 = "SELECT username, image FROM admin WHERE admin_id = ?";
+$stmt = $conn->prepare($sql2);
+$stmt->bind_param("s", $adminId);
+$stmt->execute();
+$result2 = $stmt->get_result();
+
+if ($result2->num_rows > 0) {
+    $user = $result2->fetch_assoc();
+    $username = $user['username'];
+    $image = $user['image'] ? $user['image'] : 'uploads/default_profile.jpg'; 
+} else {
+    $username = "Unknown User";
+    $image = 'uploads/default_profile.jpg'; 
+}
+
+$currentMonth = date('m'); // Month (01-12)
+$currentYear = date('Y'); // Year
+
+// Query to calculate the total feedbacks and average stars for the current month
+$sql3 = "SELECT 
+            COUNT(*) AS total_feedbacks, 
+            ROUND(AVG(stars), 2) AS average_stars 
+        FROM feedback 
+        WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?";
+
+$stmt = $conn->prepare($sql3);
+$stmt->bind_param('ii', $currentMonth, $currentYear);
+$stmt->execute();
+$result4 = $stmt->get_result();
+
+// Fetch the data
+$data = $result4->fetch_assoc();
+$totalFeedbacks = $data['total_feedbacks'] ?? 0;
+$averageStars = $data['average_stars'] ?? 0;
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/js-sha3@0.8.0/build/sha3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <meta charset="UTF-8">
 
@@ -144,6 +202,136 @@ input,
       border-color: #3b82f6;
       outline: none;
     }
+    
+
+    body {
+      background: linear-gradient(135deg, #1c1f26, #2b303b);
+      color: white;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .nav-bar {
+      background: #1a1d23;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar {
+      background: #1a1d23;
+      box-shadow: 2px 0px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .content-card {
+      background: #2a2f3b;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+
+    th {
+      background-color: #1f2733;
+      font-weight: 600;
+      color: white;
+    }
+
+    tr:hover td {
+      background-color: #2a3443;
+    }
+
+    td {
+      color: #d1d5db;
+    }
+
+   select.form-control {
+    width: 150px;
+    padding: 8px;
+    background-color: #2d3748;
+    color: #fff;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+select.form-control:focus {
+    background-color: #4a5568;
+    border-color: #63b3ed;
+    outline: none;
+}
+select {
+    appearance: none; 
+    background-color: #1f2937; 
+    color: #ffffff; 
+    border: 1px solid #374151; 
+    border-radius: 0.375rem; 
+    padding: 0.5rem 2rem 0.5rem 1rem; 
+    width: 100%; 
+    font-size: 1rem; 
+    font-family: inherit; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+  }
+
+  
+  select::after {
+    content: '▾'; 
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #ffffff;
+  }
+
+  
+  select:focus {
+    outline: none; 
+    border-color: #60a5fa; 
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); 
+  }
+
+  
+  option {
+    background-color: #1f2937; 
+    color: #ffffff; 
+  }
+
+  
+  select:disabled {
+    background-color: #374151; 
+    cursor: not-allowed; 
+    color: #9ca3af; 
+  }
+  #profile-dropdown-btn span {
+  font-size: 0.875rem; 
+  font-weight: 600;    
+  color: #e5e7eb;     
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); 
+  letter-spacing: 0.5px; 
+  text-transform: uppercase; 
+}
+
+input,
+    textarea {
+      background-color: #1c1f26;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
+
   </style>
 </head>
 
@@ -160,6 +348,11 @@ input,
         <button id="view-reports-btn" class="block w-full text-left px-6 py-3 text-white hover:bg-gray-700 transition">
           View Reports
         </button>
+        <?php if ($manageUserEnabled): ?>
+        <button id="manage-users-btn" class="block w-full text-left px-6 py-3 text-white hover:bg-gray-700 transition">
+            Manage Users
+        </button>
+    <?php endif; ?>
       </nav>
     </div>
     <footer class="text-center py-4 text-gray-400">
@@ -173,9 +366,10 @@ input,
     <nav class="nav-bar w-full px-6 py-4 flex justify-between items-center shadow-md">
       <h1 class="text-xl font-bold tracking-wide uppercase text-white">Admin Dashboard</h1>
       <div class="relative">
-        <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
-          <img src="https://via.placeholder.com/40" alt="Profile" class="w-10 h-10">
-          <span>Admin</span>
+      <button id="profile-dropdown-btn" class="flex items-center space-x-3 px-4 py-2 rounded-lg text-white hover:bg-gray-800 transition">
+          <img src="<?php echo htmlspecialchars($image); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+          <span>ADMIN</span>
+        
         </button>
         <!-- Dropdown -->
         <div id="profile-dropdown" class="profile-dropdown hidden absolute top-14 right-0 w-48 bg-gray-800 rounded-lg shadow-md">
@@ -395,32 +589,33 @@ input,
 
 
 
-    // View Reports Section
-    document.getElementById("view-reports-btn").addEventListener("click", () => {
-      contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Reports</h2>
-          <div class="overflow-auto">
-            <table class="w-full bg-gray-900 rounded-lg border-collapse table-auto">
-              <thead class="bg-gray-800">
-                <tr>
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Month</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Feedbacks</th>
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Average Stars</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="px-6 py-4">February</td>
-                  <td class="px-6 py-4">50</td>
-                  <td class="px-6 py-4">4.5</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    });
+   // View Reports Section
+document.getElementById("view-reports-btn").addEventListener("click", () => {
+  contentArea.innerHTML = `
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Reports</h2>
+      <div class="overflow-auto">
+        <table class="w-full bg-gray-900 rounded-lg border-collapse table-auto">
+          <thead class="bg-gray-800">
+            <tr>
+              <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Month</th>
+              <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Feedbacks</th>
+              <th class="px-6 py-3 text-left text-sm font-medium text-gray-400">Average Stars</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="px-6 py-4"><?php echo date('F') ?></td>
+              <td class="px-6 py-4"><?php echo $totalFeedbacks;?></td>
+              <td class="px-6 py-4"><?php echo $averageStars;?></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+});
+
 
     // Setup Profile Section
  
@@ -603,10 +798,137 @@ input,
         icon.classList.add("fa-eye");
       }
     };
+    
 
     // Logout Button
     logoutBtn.addEventListener("click", () => {
       window.location.href = "Ad_logout.php";
+    }
+  
+  );
+
+      // Manage Users Tab
+ document.addEventListener("click", async (event) => {
+  if (event.target.id === "manage-users-btn") {
+    // Manage Users Tab
+    contentArea.innerHTML = `
+      <div class="content-card p-8">
+        <h2 class="text-3xl font-bold text-white mb-4">Manage Users</h2>
+        <table class="w-full bg-gray-900 rounded-lg">
+          <thead class="bg-gray-800">
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            <?php
+            if ($result1->num_rows > 0) {
+              while ($row = $result1->fetch_assoc()) {
+                $fullName = htmlspecialchars($row['username']);
+                $email = htmlspecialchars($row['email']);
+                $status = htmlspecialchars($row['status']);
+                $userId = htmlspecialchars($row['user_ID']);
+                echo "
+                  <tr>
+                    <td>{$userId}</td>
+                    <td>{$fullName}</td>
+                    <td>{$email}</td>
+                    <td>{$status}</td>
+                    <td><button class='text-blue-400 edit-btn' data-user-id='{$userId}'>Edit</button></td>
+                  </tr>
+                ";
+              }
+            } else {
+              echo "<tr><td colspan='5'>No users found.</td></tr>";
+            }
+            ?>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+   // Handle Edit Button Click
+  if (event.target.classList.contains("edit-btn")) {
+    const userId = event.target.getAttribute("data-user-id");
+
+    // Fetch user details via AJAX or Fetch API
+    const response = await fetch(`getUserDetailsAdmin.php?user_ID=${userId}`);
+    const user = await response.json();
+
+    if (user) {
+      contentArea.innerHTML = `
+        <div class="content-card p-8">
+          <h2 class="text-3xl font-bold text-white mb-4">Edit User</h2>
+          <form id="edit-user-form">
+            <input type="hidden" id="edit-user-id" value="${user.user_ID}">
+            <div class="mb-4">
+              <label for="edit-username" class="block text-sm font-medium text-gray-300">Full Name</label>
+              <input type="text" id="edit-username" value="${user.username}" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            </div>
+            <div class="mb-4">
+              <label for="edit-email" class="block text-sm font-medium text-gray-300">Email</label>
+              <input type="email" id="edit-email" value="${user.email}" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            </div>
+            <div class="mb-4">
+              <label for="edit-status" class="block text-sm font-medium text-gray-300">Status</label>
+              <select id="edit-status" class="block w-full mt-1 px-4 py-2 border rounded-md">
+                <option value="Active" ${user.status === "Active" ? "selected" : ""}>Active</option>
+                <option value="Inactive" ${user.status === "Inactive" ? "selected" : ""}>Inactive</option>
+              </select>
+            </div>
+            <button type="button" id="save-user-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
+          </form>
+        </div>
+      `;
+    }
+  }
+   if (event.target.id === "save-user-btn") {
+    const userId = document.getElementById("edit-user-id").value;
+    const username = document.getElementById("edit-username").value;
+    const email = document.getElementById("edit-email").value;
+    const status = document.getElementById("edit-status").value;
+
+    // Send updated data to the server via Fetch API
+    const response = await fetch("updateUserAdmin.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_ID: userId, username, email, status }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      Swal.fire({
+        icon: "success",
+        title: "User updated successfully!",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+
+      // Reload the Manage Users tab
+      document.getElementById("manage-users-btn").click();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: result.message || "Failed to update user.",
+      });
+    }
+  }
+    });
+  
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const contentArea = document.getElementById("content-area");
+    
+      
     });
   </script>
 </body>
