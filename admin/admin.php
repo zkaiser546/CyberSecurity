@@ -29,6 +29,7 @@ $result = $conn->query($sql);
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
@@ -150,77 +151,161 @@ $result = $conn->query($sql);
     const profileDropdown = document.getElementById("profile-dropdown");
 
     // Close Modal
-    closeReplyModal.addEventListener("click", () => {
-      replyModal.classList.add("hidden");
-    });
+closeReplyModal.addEventListener("click", () => {
+  replyModal.classList.add("hidden");
+});
 
     // Send Reply Logic
     sendReplyBtn.addEventListener("click", () => {
-      alert("Reply sent successfully!");
-      replyModal.classList.add("hidden");
-    });
+  const replyMessage = document.getElementById("reply-message").value;
+  if (!replyMessage.trim()) {
+    alert("Please enter a reply before sending.");
+    return;
+  }
+
+   const encryptedReply = encryptFeedback(replyMessage, "SecureFeedback250");
+
+
+console.log("Encrypted reply:", encryptedReply);
+
+
+const currentButtonId = replyModal.getAttribute("data-current-button");
+const replyButton = document.getElementById(currentButtonId);
+if (replyButton) {
+  replyButton.innerText = "Replied";
+  replyButton.disabled = true;
+  replyButton.classList.add("text-gray-400"); 
+}
+
+
+document.getElementById("reply-message").value = "";
+
+replyModal.classList.add("hidden");
+
+alert("Reply sent successfully!");
+});
 
     // Profile Dropdown Toggle
     profileDropdownBtn.addEventListener("click", () => {
       profileDropdown.classList.toggle("hidden");
     });
 
-    // View Feedback Section
-    document.getElementById("view-feedback-btn").addEventListener("click", () => {
-      contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Feedback</h2>
-          <div class="mt-6 bg-gray-900 rounded-lg overflow-hidden">
-            <table class="w-full text-left">
-              <thead class="bg-gray-800">
-                <tr>
-                  <th class="px-6 py-3 text-sm font-medium text-gray-400">Feedback ID</th>
-                  <th class="px-6 py-3 text-sm font-medium text-gray-400">User</th>
-                  <th class="px-6 py-3 text-sm font-medium text-gray-400">Rating</th>
-                  <th class="px-6 py-3 text-sm font-medium text-gray-400">Comment</th>
-                  <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
-                </tr>
-              </thead>
-              <tbody id ="feedback-table-body">
-               <?php
-                if ($result->num_rows > 0) {
-                  while ($row = $result->fetch_assoc()) {
-                      $feedbackDate = htmlspecialchars($row['feedback_dD']);
-                      $username = htmlspecialchars($row['display_name']);
-                      $feedbackText = htmlspecialchars($row['feedback_text']);
-                      $stars = str_repeat("★", $row['stars']) . str_repeat("☆", 5 - $row['stars']);
-                      
-                      echo "
-                      <tr>
-                          <td class='px-6 py-4'>{$feedbackDate}</td>
-                          <td class='px-6 py-4'>{$username}</td>
-                          <td class='px-6 py-4 text-yellow-400'>{$stars}</td>
-                          <td class='px-6 py-4'>{$feedbackText}</td>
-                          <td class='px-6 py-4'>
-                              <button class='text-blue-400 hover:underline reply-btn' data-user='{$username}' data-comment='{$feedbackText}'>Reply</button>
-                          </td>
-                      </tr>
-                      ";
-                  }
-              } else {
-                  echo "<tr><td colspan='5' class='px-6 py-4'>No feedback available.</td></tr>";
-              }
-              ?>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
+    document.getElementById("view-feedback-btn").addEventListener("click", async () => {
+  contentArea.innerHTML = `
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Feedback</h2>
+      <div class="mt-6 bg-gray-900 rounded-lg overflow-hidden">
+        <table class="w-full text-left">
+          <thead class="bg-gray-800">
+            <tr>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Feedback ID</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">User</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Rating</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Comment</th>
+              <th class="px-6 py-3 text-sm font-medium text-gray-400">Action</th>
+            </tr>
+          </thead>
+          <tbody id="feedback-table-body">
+          <?php
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $feedbackId = htmlspecialchars($row['feedback_dD']);
+        $username = htmlspecialchars($row['display_name']);
+        $encryptedFeedbackText = htmlspecialchars($row['feedback_text']); // Encrypted feedback
+        $stars = str_repeat("★", $row['stars']) . str_repeat("☆", 5 - $row['stars']);
+        echo "
+        <tr>
+            <td class='px-6 py-4'>{$feedbackId}</td>
+            <td class='px-6 py-4'>{$username}</td>
+            <td class='px-6 py-4 text-yellow-400'>{$stars}</td>
+            <td class='px-6 py-4 encrypted-feedback' data-encrypted='{$encryptedFeedbackText}'>Decrypting...</td>
+            <td class='px-6 py-4'>
+                <button id='reply-btn-{$feedbackId}' class='text-blue-400 hover:underline reply-btn' 
+                        data-user='{$username}' data-comment='{$encryptedFeedbackText}'>
+                    Reply
+                </button>
+            </td>
+        </tr>
+        ";
+    }
+} else {
+    echo "<tr><td colspan='5' class='px-6 py-4'>No feedback available.</td></tr>";
+}
+?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 
-      document.querySelectorAll(".reply-btn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const user = e.target.getAttribute("data-user");
-          const comment = e.target.getAttribute("data-comment");
-          document.getElementById("feedback-user").innerText = `Replying to ${user}: "${comment}"`;
-          replyModal.classList.remove("hidden");
-        });
-      });
-    });
+  // Use the same encryption key for decryption
+  const encryptionKey = "SecureFeedback250";
+
+  // Select all rows with encrypted feedback
+  const feedbackRows = document.querySelectorAll(".encrypted-feedback");
+
+  feedbackRows.forEach((row) => {
+    const encryptedText = row.dataset.encrypted;
+
+    // Decrypt the feedback
+    const decryptedText = decryptFeedback(encryptedText, encryptionKey);
+
+    // Replace the "Decrypting..." placeholder with the actual decrypted text
+    row.textContent = decryptedText;
+  });
+});
+
+// Decryption function
+const decryptFeedback = (encryptedData, key) => {
+  const iv = CryptoJS.enc.Hex.parse(encryptedData.substr(0, 32));
+  const encrypted = encryptedData.substr(32);
+  return CryptoJS.AES.decrypt(encrypted, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  }).toString(CryptoJS.enc.Utf8);
+};
+
+//encryption
+    
+const encryptFeedback = (feedback, key) => {
+  const iv = CryptoJS.lib.WordArray.random(16);
+  const encrypted = CryptoJS.AES.encrypt(feedback, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+
+  // Combine IV and encrypted data
+  return iv.toString() + encrypted.toString();
+};
+
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("reply-btn")) {
+    const user = e.target.getAttribute("data-user");
+    const encryptedComment = e.target.getAttribute("data-comment");
+
+    // Decrypt the comment to display it in the modal
+    const decryptedComment = decryptFeedback(encryptedComment, "SecureFeedback250");
+
+    // Display user and decrypted comment in the modal
+    document.getElementById("feedback-user").innerText = `Replying to ${user}: "${decryptedComment}"`;
+
+    // Store the button element for later use (to disable it after reply)
+    const buttonId = e.target.id;
+if (buttonId) {
+  replyModal.setAttribute("data-current-button", buttonId);
+} else {
+  console.error("Reply button ID is missing.");
+}
+
+
+    // Show the modal
+    replyModal.classList.remove("hidden");
+  }
+});
+
+
 
     // View Reports Section
     document.getElementById("view-reports-btn").addEventListener("click", () => {
