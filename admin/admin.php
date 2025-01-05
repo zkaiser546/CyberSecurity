@@ -1,5 +1,11 @@
 <?php
+session_start();
 include '../database/dbConnect.php';
+if (!isset($_SESSION['admin_ID'])) {
+  header("Location: ../login.php");
+  exit();
+}
+$adminId = $_SESSION['admin_ID']
 ?>
 
 <!DOCTYPE html>
@@ -7,6 +13,7 @@ include '../database/dbConnect.php';
 <head>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -55,6 +62,87 @@ include '../database/dbConnect.php';
       width: 90%;
       max-width: 500px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    select.form-control {
+    width: 150px;
+    padding: 8px;
+    background-color: #2d3748;
+    color: #fff;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+select.form-control:focus {
+    background-color: #4a5568;
+    border-color: #63b3ed;
+    outline: none;
+}
+select {
+    appearance: none; 
+    background-color: #1f2937; 
+    color: #ffffff; 
+    border: 1px solid #374151; 
+    border-radius: 0.375rem; 
+    padding: 0.5rem 2rem 0.5rem 1rem; 
+    width: 100%; 
+    font-size: 1rem; 
+    font-family: inherit; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+  }
+
+  
+  select::after {
+    content: '▾'; 
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #ffffff;
+  }
+
+  
+  select:focus {
+    outline: none; 
+    border-color: #60a5fa; 
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); 
+  }
+
+  
+  option {
+    background-color: #1f2937; 
+    color: #ffffff; 
+  }
+
+  
+  select:disabled {
+    background-color: #374151; 
+    cursor: not-allowed; 
+    color: #9ca3af; 
+  }
+  #profile-dropdown-btn span {
+  font-size: 0.875rem; 
+  font-weight: 600;    
+  color: #e5e7eb;     
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); 
+  letter-spacing: 0.5px; 
+  text-transform: uppercase; 
+}
+
+input,
+    textarea {
+      background-color: #1c1f26;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #3b82f6;
+      outline: none;
     }
   </style>
 </head>
@@ -129,6 +217,7 @@ include '../database/dbConnect.php';
     const profileDropdown = document.getElementById("profile-dropdown");
     const viewFeedback = document.getElementById("view-feedback-btn");
     const logoutBtn = document.getElementById("logout-btn");
+    const setupProfileBtn = document.getElementById("setup-profile-btn");
 
 
     // Close Modal
@@ -334,22 +423,186 @@ include '../database/dbConnect.php';
     });
 
     // Setup Profile Section
-    document.getElementById("setup-profile-btn").addEventListener("click", () => {
+ 
+  // Setup Profile Functionality
+  setupProfileBtn.addEventListener("click", () => {
+      const contentArea = document.getElementById("content-area");
       contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
-          <form>
-            <label class="block text-gray-300 mb-2">Update Profile Picture</label>
-            <input type="file" class="block w-full text-gray-400 bg-gray-800 rounded mb-4 p-2">
-            <label class="block text-gray-300 mb-2">Old Password</label>
-            <input type="password" class="block w-full bg-gray-800 text-gray-300 rounded mb-4 p-2">
-            <label class="block text-gray-300 mb-2">New Password</label>
-            <input type="password" class="block w-full bg-gray-800 text-gray-300 rounded mb-4 p-2">
-            <button class="bg-blue-500 text-white px-4 py-2 rounded-lg">Save Changes</button>
-          </form>
+    <div class="content-card p-8">
+      <h2 class="text-3xl font-bold text-white mb-4">Setup Profile</h2>
+      <form id="profile-form">
+        <div class="mb-4">
+          <label for="profile-pic" class="block text-sm font-medium text-gray-300">Profile Picture</label>
+          <input type="file" id="profile-pic" accept="image/*" class="block w-full mt-1 px-4 py-2 border rounded-md">
         </div>
-      `;
+      <div class="mb-6 relative">
+          <label for="old-password" class="block text-sm font-medium text-gray-300">Old Password</label>
+          <div class="relative">
+            <input type="password" id="old-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('old-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
+        </div>
+        <div class="mb-6 relative">
+          <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
+          <div class="relative">
+            <input type="password" id="new-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('new-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
+        </div>
+        <div class="mb-6 relative">
+          <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New Password</label>
+          <div class="relative">
+            <input type="password" id="confirm-password" class="block w-full mt-1 px-4 py-2 border rounded-md">
+            <button type="button" class="absolute inset-y-0 right-2 flex items-center justify-center text-gray-400"
+              onclick="togglePasswordVisibility('confirm-password')">
+              <span><i class="fa-solid fa-eye"></i></span>
+            </button>
+          </div>
+        </div>
+        <button type="button" id="save-changes" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
+      </form>
+    </div>
+  `;
+
+      const saveChangesBtn = document.getElementById("save-changes");
+      saveChangesBtn.addEventListener("click", async () => {
+        try {
+          const profilePic = document.getElementById("profile-pic").files[0];
+          const oldPassword = document.getElementById("old-password").value;
+          const newPassword = document.getElementById("new-password").value;
+          const confirmPassword = document.getElementById("confirm-password").value;
+
+          // Validate inputs
+          if (!validateInputs(oldPassword, newPassword, confirmPassword)) {
+            return;
+          }
+
+          Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we update your profile.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          // Encrypt passwords using SHA3-512
+          const hashedOldPassword = sha3_512(oldPassword);
+          const hashedNewPassword = sha3_512(newPassword);
+
+          const formData = new FormData();
+          if (profilePic) {
+            formData.append("profilePic", profilePic);
+          }
+          formData.append("oldPassword", hashedOldPassword);
+          formData.append("newPassword", hashedNewPassword);
+
+          const response = await fetch("changePassAdmin.php", {
+            method: "POST",
+            body: formData,
+          });
+
+          // First try to get the response as text
+          const responseText = await response.text();
+
+          let result;
+          try {
+            // Then parse the text as JSON
+            result = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('JSON Parse Error:', responseText);
+            throw new Error('Invalid server response format');
+          }
+
+          if (result.success) {
+            await Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: result.message,
+              showConfirmButton: false,
+              timer: 1500
+            });
+            clearForm();
+          } else {
+            throw new Error(result.message || 'Unknown error occurred');
+          }
+        } catch (error) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error updating profile. Please try again.'
+          });
+        }
+      });
     });
+
+    function validateInputs(oldPassword, newPassword, confirmPassword) {
+      if (!oldPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter your current password.'
+        });
+        return false;
+      }
+
+      if (!newPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Please enter a new password.'
+        });
+        return false;
+      }
+
+      if (newPassword.length < 8) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New password must be at least 8 characters long.'
+        });
+        return false;
+      }
+
+      if (newPassword !== confirmPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'New passwords do not match!'
+        });
+        return false;
+      }
+
+      return true;
+    }
+
+    function clearForm() {
+      document.getElementById("profile-pic").value = "";
+      document.getElementById("old-password").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("confirm-password").value = "";
+    }
+    window.togglePasswordVisibility = (inputId) => {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling; 
+      const icon = button.querySelector("i");
+
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    };
 
     // Logout Button
     logoutBtn.addEventListener("click", () => {
