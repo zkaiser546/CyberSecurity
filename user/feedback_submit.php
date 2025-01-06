@@ -3,7 +3,7 @@ include "../database/dbConnect.php";
 session_start();
 
 function checkUserSession() {
-    return isset($_SESSION['user_ID']); // Removed logged_in check since it's not set in login
+    return isset($_SESSION['user_ID']);
 }
 
 function generateFeedbackId($conn) {
@@ -19,7 +19,6 @@ function generateFeedbackId($conn) {
     
     return 'FB' . str_pad($sequence, 8, '0', STR_PAD_LEFT);
 }
-
 
 header('Content-Type: application/json');
 error_reporting(0); // Prevent PHP errors from breaking JSON response
@@ -42,7 +41,8 @@ try {
         throw new Exception('Invalid feedback data');
     }
 
-    $stmt = $conn->prepare("SELECT username FROM users WHERE user_ID = ?");
+    // Fetch user data
+    $stmt = $conn->prepare("SELECT username, manage_users FROM users WHERE user_ID = ?");
     $stmt->bind_param("s", $userId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -50,6 +50,11 @@ try {
 
     if (!$user) {
         throw new Exception('User not found');
+    }
+
+    // Check if user is blocked
+    if ($user['manage_users'] === 'Blocked') {
+        throw new Exception('You have been Blocked by Admin! You are not allowed to submit feedback.');
     }
 
     $feedbackId = generateFeedbackId($conn);

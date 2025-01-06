@@ -62,7 +62,7 @@ $totalFeedbacks = $data['total_feedbacks'] ?? 0;
 $averageStars = $data['average_stars'] ?? 0;
 
                 // Fetch admin data along with their access control status
-$sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user 
+$sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user, accessControl.user_control 
          FROM admin 
          LEFT JOIN accessControl ON admin.admin_id = accessControl.admin_id";
          $result5 = $conn->query($sql4);
@@ -681,6 +681,7 @@ input,
                         <select name='access_control_".$row['user_id']."' class='form-control'>
                             <option value='Enabled' " . ($row['manage_users'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
                             <option value='Disabled' " . ($row['manage_users'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
+                            <option value='Blocked' " . ($row['manage_users'] === 'Blocked' ? 'selected' : '') . ">Blocked</option>
                         </select>
                     </td>";
                     echo "<td>
@@ -705,6 +706,7 @@ input,
                 <th>ID</th>
                 <th>Name</th>
                 <th>Manage User</th>
+                <th>User Control</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -721,6 +723,13 @@ input,
                         <select name='access_control_".$row['admin_id']."' class='form-control'>
                             <option value='Enabled' " . ($row['manage_user'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
                             <option value='Disabled' " . ($row['manage_user'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
+                            
+                        </select>
+                    </td>";
+                     echo "<td>
+                        <select name='user_control".$row['admin_id']."' class='form-control'>
+                            <option value='Enabled' " . ($row['user_control'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
+                            <option value='Disabled' " . ($row['user_control'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
                         </select>
                     </td>";
                     echo "<td>
