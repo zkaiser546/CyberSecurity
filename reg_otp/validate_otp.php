@@ -120,6 +120,7 @@ try {
     // If we get here, OTP is valid. Create user account
     $username = $_SESSION['user_info']['username'];
     $hashed_password = $_SESSION['user_info']['password'];
+    $email = $_SESSION['user_info']['email'];
 
     error_log("Creating user account for username: " . $username);
 

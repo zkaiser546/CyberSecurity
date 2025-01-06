@@ -1,9 +1,11 @@
 <?php
 session_start();
 include '../database/dbConnect.php';
+
+
 if (!isset($_SESSION['admin_ID'])) {
-  header("Location: ../login.php");
-  exit();
+    header("Location: ../login.php");
+    exit();
 }
 
 $adminId = $_SESSION['admin_ID'];

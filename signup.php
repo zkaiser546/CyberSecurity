@@ -91,10 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
       // Store user info in session
       $_SESSION['user_info'] = [
-        'username' => $username,
-        'email' => $email,
-        'password' => hash('sha3-512', $password)
-    ];
+          'username' => $username,
+          'email' => $email,
+          'password' => hash('sha3-512', $password)
+      ];
 
       // Send verification email using PHPMailer
       $mail = new PHPMailer(true);

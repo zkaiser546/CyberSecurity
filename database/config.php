@@ -53,7 +53,7 @@ $insertQueryAdmin = "INSERT INTO admin (admin_id, username, email, password, ima
 SELECT 
     'AD001',
     'admin001',
-    'admin001@gmail.com',
+    'zkaiser546@gmail.com',
     '$hashedPassword',
     NULL,
     'Active'
@@ -78,7 +78,7 @@ $insertQueryAdmin = "INSERT INTO admin (admin_id, username, email, password, ima
 SELECT 
     'AD002',
     'admin002',
-    'admin002@gmail.com',
+    'ktzamora00048@usep.edu.ph',
     '$hashedPassword',
     NULL,
     'Active'
@@ -164,7 +164,7 @@ $insertQuery = "INSERT INTO supAdmin (spAd_ID, username, email, password, image,
 SELECT 
     'SP001',
     'superadmin',
-    'superadmin@gmail.com',
+    'ktzamora00048@usep.edu.ph',
     '$hashedPassword',
     NULL,
     'Active',

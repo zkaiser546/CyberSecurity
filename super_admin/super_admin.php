@@ -1,11 +1,13 @@
 <?php
 session_start();
-
 include '../database/dbConnect.php';
+
+
 if (!isset($_SESSION['spAd_ID'])) {
-  header("Location: ../login.php");
-  exit();
+    header("Location: ../login.php");
+    exit();
 }
+
 $sup_id = $_SESSION['spAd_ID'];
 $sql = "SELECT username, image FROM supadmin WHERE spAd_id = ?";
 $stmt = $conn->prepare($sql);

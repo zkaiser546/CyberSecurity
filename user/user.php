@@ -1,11 +1,10 @@
 <?php
 session_start();
 include '../database/dbConnect.php';
-if (!isset($_SESSION['user_ID'])) {
+if (!isset($_SESSION['spAd_ID']) && !isset($_SESSION['admin_ID']) && !isset($_SESSION['user_ID'])) {
   header("Location: ../login.php");
   exit();
 }
-
 // Fetch user details
 $user_id = $_SESSION['user_ID'];
 $sql = "SELECT username, image FROM users WHERE user_id = ?";
