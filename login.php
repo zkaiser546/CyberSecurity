@@ -15,136 +15,191 @@ require './vendor/phpmailer/phpmailer/src/SMTP.php';
 
 session_start();
 
+// Function to encrypt email using AES-256
+function encryptEmail($email, $key) {
+    // Generate a random IV
+    $iv = openssl_random_pseudo_bytes(16);
+    
+    // Encrypt the email
+    $encrypted = openssl_encrypt(
+        $email,
+        'AES-256-CBC',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv
+    );
+    
+    // Combine IV and encrypted data
+    $combined = $iv . $encrypted;
+    
+    // Return base64 encoded string
+    return base64_encode($combined);
+}
+
+// Function to decrypt email
+function decryptEmail($encryptedData, $key) {
+    try {
+        // Decode from base64
+        $combined = base64_decode($encryptedData);
+        
+        // Check if we have enough data
+        if (strlen($combined) <= 16) {
+            error_log("Decryption error: Invalid encrypted data length");
+            return false;
+        }
+        
+        // Extract IV and encrypted data
+        $iv = substr($combined, 0, 16);
+        $encrypted = substr($combined, 16);
+        
+        // Decrypt the email
+        $decrypted = openssl_decrypt(
+            $encrypted,
+            'AES-256-CBC',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv
+        );
+        
+        if ($decrypted === false) {
+            error_log("Decryption error: openssl_decrypt failed");
+            return false;
+        }
+        
+        return $decrypted;
+    } catch (Exception $e) {
+        error_log("Decryption error: " . $e->getMessage());
+        return false;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
-  header('Content-Type: application/json');
-  ob_start();
-  
-  try {
-      $email = trim($_POST['email'] ?? '');
-      $password = hash('sha3-512', $_POST['password'] ?? '');
-      $userFound = false;
+    header('Content-Type: application/json');
+    ob_start();
+    
+    try {
+        $encryptionKey = 'SecureFeedback250';
+        $email = trim($_POST['email'] ?? '');
+        $password = hash('sha3-512', $_POST['password'] ?? '');
+        $userFound = false;
 
-      // Check Super Admin first
-      $supadminStmt = $conn->prepare("SELECT spAd_ID, username, password FROM supAdmin WHERE email = ?");
-      if (!$supadminStmt) {
-          throw new Exception("Database prepare error: " . $conn->error);
-      }
-
-      $supadminStmt->bind_param("s", $email);
-      $supadminStmt->execute();
-      $supadminResult = $supadminStmt->get_result();
-
-      if ($supadminRow = $supadminResult->fetch_assoc()) {
-          if ($password === $supadminRow['password']) {
-              $user_id = $supadminRow['spAd_ID'];
-              $username = $supadminRow['username'];
-              $userFound = true;
-          }
-      }
-      $supadminStmt->close();
-
-      // Check Admin if not found
-      if (!$userFound) {
-          $adminStmt = $conn->prepare("SELECT admin_ID, username, password FROM admin WHERE email = ?");
-          if (!$adminStmt) {
-              throw new Exception("Database prepare error: " . $conn->error);
-          }
-
-          $adminStmt->bind_param("s", $email);
-          $adminStmt->execute();
-          $adminResult = $adminStmt->get_result();
-
-          if ($adminRow = $adminResult->fetch_assoc()) {
-              if ($password === $adminRow['password']) {
-                  $user_id = $adminRow['admin_ID'];
-                  $username = $adminRow['username'];
-                  $userFound = true;
-              }
-          }
-          $adminStmt->close();
-      }
-
-      // Finally check regular users if still not found
-      if (!$userFound) {
-        $userStmt = $conn->prepare("SELECT user_id, username, password, manage_users FROM users WHERE email = ?");
-        if (!$userStmt) {
+        // Check Super Admin first
+        $supadminStmt = $conn->prepare("SELECT spAd_ID, username, password, email FROM supAdmin");
+        if (!$supadminStmt) {
             throw new Exception("Database prepare error: " . $conn->error);
         }
-    
-        $userStmt->bind_param("s", $email);
-        $userStmt->execute();
-        $userResult = $userStmt->get_result();
-    
-        if ($userRow = $userResult->fetch_assoc()) {
-            // Check if passwords match (plaintext comparison)
-            if ($password === $userRow['password']) {
-                // Verify the `manage_users` field if it exists
-                if (isset($userRow['manage_users']) && $userRow['manage_users'] === 'Disabled') {
-                    throw new Exception('Your account is currently disabled and cannot manage users. Please contact the administrator for further assistance.');
+
+        $supadminStmt->execute();
+        $supadminResult = $supadminStmt->get_result();
+
+        while ($supadminRow = $supadminResult->fetch_assoc()) {
+            $decrypted_email = decryptEmail($supadminRow['email'], $encryptionKey);
+            if ($decrypted_email !== false && $decrypted_email === $email) {
+                if ($password === $supadminRow['password']) {
+                    $user_id = $supadminRow['spAd_ID'];
+                    $username = $supadminRow['username'];
+                    $encrypted_email = $supadminRow['email'];
+                    $userFound = true;
+                    break;
                 }
-    
-                // Successful login
-                $user_id = $userRow['user_id'];
-                $username = $userRow['username'];
-                $userFound = true;
-            } else {
-                throw new Exception('Invalid password.');
             }
-        } else {
+        }
+        $supadminStmt->close();
+
+        // Check Admin if not found
+        if (!$userFound) {
+            $adminStmt = $conn->prepare("SELECT admin_ID, username, password, email FROM admin");
+            if (!$adminStmt) {
+                throw new Exception("Database prepare error: " . $conn->error);
+            }
+
+            $adminStmt->execute();
+            $adminResult = $adminStmt->get_result();
+
+            while ($adminRow = $adminResult->fetch_assoc()) {
+                $decrypted_email = decryptEmail($adminRow['email'], $encryptionKey);
+                if ($decrypted_email !== false && $decrypted_email === $email) {
+                    if ($password === $adminRow['password']) {
+                        $user_id = $adminRow['admin_ID'];
+                        $username = $adminRow['username'];
+                        $encrypted_email = $adminRow['email'];
+                        $userFound = true;
+                        break;
+                    }
+                }
+            }
+            $adminStmt->close();
+        }
+
+        // Finally check regular users if still not found
+        if (!$userFound) {
+            $userStmt = $conn->prepare("SELECT user_id, username, password, email, manage_users FROM users");
+            if (!$userStmt) {
+                throw new Exception("Database prepare error: " . $conn->error);
+            }
+
+            $userStmt->execute();
+            $userResult = $userStmt->get_result();
+
+            while ($userRow = $userResult->fetch_assoc()) {
+                $decrypted_email = decryptEmail($userRow['email'], $encryptionKey);
+                if ($decrypted_email !== false && $decrypted_email === $email) {
+                    if ($password === $userRow['password']) {
+                        if (isset($userRow['manage_users']) && $userRow['manage_users'] === 'Disabled') {
+                            throw new Exception('Your account is currently disabled. Please contact the administrator.');
+                        }
+                        $user_id = $userRow['user_id'];
+                        $username = $userRow['username'];
+                        $encrypted_email = $userRow['email'];
+                        $userFound = true;
+                        break;
+                    } else {
+                        throw new Exception('Invalid password.');
+                    }
+                }
+            }
+            $userStmt->close();
+        }
+
+        if (!$userFound) {
             throw new Exception('Invalid email or password.');
         }
-    
-        $userStmt->close();
-    }
-    
-    if (!$userFound) {
-        throw new Exception('Invalid email or password.');
-    }
-    
 
-      if (!$userFound) {
-          throw new Exception('Invalid email or password.');
-      }
+        // Generate OTP
+        $verification_code = rand(100000, 999999);
 
-      // Generate OTP and continue with the rest of the process
-      $verification_code = rand(100000, 999999);
-
-      // Delete any previous OTP for this user
-      $delete_stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ?");
-      if (!$delete_stmt) {
-          throw new Exception("Failed to prepare deletion statement: " . $conn->error);
-      }
-      $delete_stmt->bind_param("s", $email);
-      $delete_stmt->execute();
-      $delete_stmt->close();
-
-      // Insert the new OTP
-      $stmt = $conn->prepare("INSERT INTO verification_codes (email, code, created_at) VALUES (?, ?, NOW())");
-      if (!$stmt) {
-          throw new Exception("Failed to prepare verification code storage: " . $conn->error);
-      }
-      $stmt->bind_param("ss", $email, $verification_code);
-      if (!$stmt->execute()) {
-          if ($stmt->errno === 1062) {
-              throw new Exception("This email is already pending verification. Please check your email for the verification code or wait a few minutes to try again.");
-          } else {
-              throw new Exception("Failed to store verification code: " . $stmt->error);
-          }
-      }
-      $stmt->close();
-
-      // Store login info in session
-      if ($userFound) {
-        if (isset($supadminRow)) {
-            $_SESSION['spAd_ID'] = $user_id;
-        } else if (isset($adminRow)) {
-            $_SESSION['admin_ID'] = $user_id;
-        } else {
-            $_SESSION['user_ID'] = $user_id;
+        // Delete previous OTP
+        $delete_stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ?");
+        if (!$delete_stmt) {
+            throw new Exception("Failed to prepare deletion statement: " . $conn->error);
         }
-        $_SESSION['email'] = $email;
-        $_SESSION['username'] = $username;
-    }
+        $delete_stmt->bind_param("s", $email); // Use original email for verification codes
+        $delete_stmt->execute();
+        $delete_stmt->close();
+
+        // Insert new OTP
+        $stmt = $conn->prepare("INSERT INTO verification_codes (email, code, created_at) VALUES (?, ?, NOW())");
+        if (!$stmt) {
+            throw new Exception("Failed to prepare verification code storage: " . $conn->error);
+        }
+        $stmt->bind_param("ss", $email, $verification_code);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to store verification code: " . $stmt->error);
+        }
+        $stmt->close();
+
+        // Store login info in session
+        if ($userFound) {
+            if (isset($supadminRow)) {
+                $_SESSION['spAd_ID'] = $user_id;
+            } else if (isset($adminRow)) {
+                $_SESSION['admin_ID'] = $user_id;
+            } else {
+                $_SESSION['user_ID'] = $user_id;
+            }
+            $_SESSION['email'] = $encrypted_email;
+            $_SESSION['username'] = $username;
+        }
 
         // Send OTP via email
         $mail = new PHPMailer(true);
@@ -203,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         } catch (Exception $e) {
             throw new Exception("Failed to send verification email: " . $e->getMessage());
         }
-      } catch (Exception $e) {
+    } catch (Exception $e) {
         error_log("Login Error: " . $e->getMessage());
         echo json_encode([
             'success' => false,

@@ -3,14 +3,47 @@ declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-// Start output buffering and session
 ob_start();
 session_start();
 
-// Include database connection
 require_once('../database/dbConnect.php');
 
-// Function to send JSON response
+// Encryption functions
+function encryptEmail($email, $key) {
+    $iv = openssl_random_pseudo_bytes(16);
+    $encrypted = openssl_encrypt(
+        $email,
+        'AES-256-CBC',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv
+    );
+    $combined = $iv . $encrypted;
+    return base64_encode($combined);
+}
+
+function decryptEmail($encryptedData, $key) {
+    try {
+        $combined = base64_decode($encryptedData);
+        if (strlen($combined) <= 16) {
+            return false;
+        }
+        $iv = substr($combined, 0, 16);
+        $encrypted = substr($combined, 16);
+        $decrypted = openssl_decrypt(
+            $encrypted,
+            'AES-256-CBC',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv
+        );
+        return $decrypted;
+    } catch (Exception $e) {
+        error_log("Decryption error: " . $e->getMessage());
+        return false;
+    }
+}
+
 function sendJsonResponse(bool $success, string $message, string $redirect = ''): void {
     while (ob_get_level()) {
         ob_end_clean();
@@ -24,10 +57,8 @@ function sendJsonResponse(bool $success, string $message, string $redirect = '')
     exit;
 }
 
-// Handle AJAX POST requests only
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     try {
-        // Validate required fields
         $requiredFields = ['email', 'password', 'otp'];
         foreach ($requiredFields as $field) {
             if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
@@ -35,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             }
         }
 
-        // Sanitize inputs
         $email = filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("Invalid email format");
@@ -48,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             throw new Exception("Invalid OTP format");
         }
 
-        // Verify OTP first
+        // Verify OTP
         $stmt = $conn->prepare("
             SELECT id, attempts, created_at 
             FROM verification_codes 
@@ -58,14 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         ");
 
         if (!$stmt) {
-            error_log("Database Error: " . $conn->error);
             throw new Exception("System error occurred. Please try again.");
         }
 
         $stmt->bind_param("ss", $email, $otp);
         
         if (!$stmt->execute()) {
-            error_log("Execute Error: " . $stmt->error);
             throw new Exception("Failed to verify code. Please try again.");
         }
         
@@ -79,125 +107,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 WHERE email = ?
             ");
             
-            if (!$attemptsStmt) {
-                throw new Exception("System error occurred. Please try again.");
-            }
+            if ($attemptsStmt) {
+                $attemptsStmt->bind_param("s", $email);
+                $attemptsStmt->execute();
+                $attemptsResult = $attemptsStmt->get_result();
+                $attemptData = $attemptsResult->fetch_assoc();
 
-            $attemptsStmt->bind_param("s", $email);
-            $attemptsStmt->execute();
-            $attemptsResult = $attemptsStmt->get_result();
-            $attemptData = $attemptsResult->fetch_assoc();
-
-            if ($attemptData) {
-                if ($attemptData['attempts'] >= 3) {
-                    throw new Exception('Too many incorrect attempts. Please request a new code.');
+                if ($attemptData) {
+                    if ($attemptData['attempts'] >= 3) {
+                        throw new Exception('Too many incorrect attempts. Please request a new code.');
+                    }
+                    if ((time() - strtotime($attemptData['created_at'])) > 600) {
+                        throw new Exception('Verification code has expired. Please request a new one.');
+                    }
                 }
-
-                // Check if OTP has expired
-                $createdTime = strtotime($attemptData['created_at']);
-                if ((time() - $createdTime) > 600) { // 10 minutes
-                    throw new Exception('Verification code has expired. Please request a new one.');
-                }
-
-                // Increment attempts
-                $updateStmt = $conn->prepare("
-                UPDATE {$info['table']} 
-                SET status = 'Active' 
-                WHERE {$info['id_column']} = ?
-            ");
-                $updateStmt->bind_param("s", $email);
-                $updateStmt->execute();
             }
-
             throw new Exception('Invalid verification code.');
         }
 
-     
+        $encryptionKey = 'SecureFeedback250';
         $userTypes = [
-          'supAdmin' => [
-              'table' => 'supAdmin', 
-              'id_column' => 'spAd_ID', 
-              'redirect' => '../super_admin/super_admin.php'
-          ],
-          'admin' => [
-              'table' => 'admin', 
-              'id_column' => 'admin_id', 
-              'redirect' => '../admin/admin.php'
-          ],
-          'users' => [
-              'table' => 'users', 
-              'id_column' => 'user_id', 
-              'redirect' => '../user/user.php'
-          ]
-      ];
-      
-      // Inside your try block:
-      $userFound = false;
-      $redirect = '';
-      $userType = '';  // Add this to track user type
-      
-      foreach ($userTypes as $type => $info) {
-          $stmt = $conn->prepare("
-              SELECT {$info['id_column']}, password, status
-              FROM {$info['table']} 
-              WHERE email = ?
-          ");
-          
-          if (!$stmt) {
-              continue;
-          }
-      
-          $stmt->bind_param("s", $email);
-          $stmt->execute();
-          $result = $stmt->get_result();
-      
-          if ($userData = $result->fetch_assoc()) {
-              if ($password === $userData['password']) {
-                  // Check if account is blocked/inactive
-                  if ($userData['status'] === 'Blocked') {
-                      throw new Exception('This account has been blocked. Please contact support.');
-                  }
-      
-                  // Store multiple session variables for better tracking
-                  $_SESSION['user_ID'] = $userData[$info['id_column']];
-                  $_SESSION['user_type'] = $type;  // Store the user type
-                  $_SESSION['user_email'] = $email;
-                  
-                  $userFound = true;
-                  $redirect = $info['redirect'];
-                  
-                  // Update user status
-                  $updateStmt = $conn->prepare("
-                      UPDATE {$info['table']} 
-                      SET status = 'Active' 
-                      WHERE {$info['id_column']} = ?
-                  ");
-                  
-                  if (!$updateStmt) {
-                      throw new Exception("Failed to prepare status update statement.");
-                  }
-                  
-                  $updateStmt->bind_param("s", $userData[$info['id_column']]); 
-                  
-                  if (!$updateStmt->execute()) {
-                      throw new Exception("Failed to update user status.");
-                  }
-                  
-                  break;
-              }
-          }
-      }
-      
-      if (!$userFound) {
-          throw new Exception('Invalid credentials.');
-      }
+            'supAdmin' => [
+                'table' => 'supAdmin', 
+                'id_column' => 'spAd_ID', 
+                'redirect' => '../super_admin/super_admin.php'
+            ],
+            'admin' => [
+                'table' => 'admin', 
+                'id_column' => 'admin_id', 
+                'redirect' => '../admin/admin.php'
+            ],
+            'users' => [
+                'table' => 'users', 
+                'id_column' => 'user_id', 
+                'redirect' => '../user/user.php'
+            ]
+        ];
+
+        $userFound = false;
+        $redirect = '';
+
+        foreach ($userTypes as $type => $info) {
+            $stmt = $conn->prepare("
+                SELECT {$info['id_column']}, password, status, email
+                FROM {$info['table']} 
+                WHERE 1
+            ");
+            
+            if (!$stmt) {
+                continue;
+            }
+
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            while ($userData = $result->fetch_assoc()) {
+                $decrypted_email = decryptEmail($userData['email'], $encryptionKey);
+                
+                if ($decrypted_email === $email && $password === $userData['password']) {
+                    if ($userData['status'] === 'Blocked') {
+                        throw new Exception('This account has been blocked. Please contact support.');
+                    }
+
+                    $_SESSION['user_ID'] = $userData[$info['id_column']];
+                    $_SESSION['user_type'] = $type;
+                    $_SESSION['user_email'] = $userData['email'];
+                    
+                    $userFound = true;
+                    $redirect = $info['redirect'];
+                    
+                    $updateStmt = $conn->prepare("
+                        UPDATE {$info['table']} 
+                        SET status = 'Active' 
+                        WHERE {$info['id_column']} = ?
+                    ");
+                    
+                    if (!$updateStmt) {
+                        throw new Exception("Failed to prepare status update statement.");
+                    }
+                    
+                    $updateStmt->bind_param("s", $userData[$info['id_column']]); 
+                    
+                    if (!$updateStmt->execute()) {
+                        throw new Exception("Failed to update user status.");
+                    }
+                    
+                    break 2;
+                }
+            }
+        }
+
+        if (!$userFound) {
+            throw new Exception('Invalid credentials.');
+        }
 
         // Delete used OTP
         $deleteStmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ?");
         $deleteStmt->bind_param("s", $email);
         $deleteStmt->execute();
 
-        // Send success response
         sendJsonResponse(true, 'Login successful!', $redirect);
 
     } catch (Exception $e) {

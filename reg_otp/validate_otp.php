@@ -8,6 +8,48 @@ session_start();
 header('Content-Type: application/json');
 include "../database/dbConnect.php";
 
+// Function to encrypt email using AES-256
+function encryptEmail($email, $key) {
+    // Generate a random IV
+    $iv = openssl_random_pseudo_bytes(16);
+    
+    // Encrypt the email
+    $encrypted = openssl_encrypt(
+        $email,
+        'AES-256-CBC',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv
+    );
+    
+    // Combine IV and encrypted data
+    $combined = $iv . $encrypted;
+    
+    // Return base64 encoded string
+    return base64_encode($combined);
+}
+
+// Function to decrypt email (for verification purposes)
+function decryptEmail($encryptedData, $key) {
+    // Decode from base64
+    $combined = base64_decode($encryptedData);
+    
+    // Extract IV and encrypted data
+    $iv = substr($combined, 0, 16);
+    $encrypted = substr($combined, 16);
+    
+    // Decrypt the email
+    $decrypted = openssl_decrypt(
+        $encrypted,
+        'AES-256-CBC',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv
+    );
+    
+    return $decrypted;
+}
+
 // Function to generate user ID with prefix
 function generateUserId($conn) {
     $date = date('Ymd'); 
@@ -18,9 +60,7 @@ function generateUserId($conn) {
     
     if ($result && $result->num_rows > 0) {
         $lastId = $result->fetch_assoc()['user_id'];
-        
         $sequence = intval(substr($lastId, -4)) + 1;
-        
         
         if ($sequence > 9999) {
             $sequence = 1; 
@@ -29,11 +69,13 @@ function generateUserId($conn) {
         $sequence = 1; 
     }
     
-    
     return 'USER' . $date . str_pad($sequence, 4, '0', STR_PAD_LEFT);
 }
 
 try {
+    // Define encryption key
+    $encryptionKey = 'SecureFeedback250';
+
     // Check database connection
     if (!$conn) {
         throw new Exception("Database connection failed: " . mysqli_connect_error());
@@ -128,7 +170,10 @@ try {
     $user_id = generateUserId($conn);
     error_log("Generated User ID: " . $user_id);
 
-    // Create user account with the generated ID
+    // Encrypt the email
+    $encrypted_email = encryptEmail($email, $encryptionKey);
+    
+    // Create user account with the generated ID and encrypted email
     $stmt = $conn->prepare("INSERT INTO users (user_id, username, email, password, status) 
                            VALUES (?, ?, ?, ?, 'Inactive')");
     
@@ -136,7 +181,7 @@ try {
         throw new Exception("Database prepare error for user creation: " . $conn->error);
     }
 
-    $stmt->bind_param("ssss", $user_id, $username, $email, $hashed_password);
+    $stmt->bind_param("ssss", $user_id, $username, $encrypted_email, $hashed_password);
     
     if (!$stmt->execute()) {
         throw new Exception("Failed to create user account: " . $stmt->error);
@@ -144,7 +189,7 @@ try {
 
     $stmt->close();
 
-    // Clear the OTP
+    // Clear the OTP using original email
     $stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -154,7 +199,7 @@ try {
     $_SESSION = array();
     $_SESSION['user_id'] = $user_id;
     $_SESSION['username'] = $username;
-    $_SESSION['email'] = $email;
+    $_SESSION['email'] = $encrypted_email;  // Store encrypted email in session
 
     error_log("Account created successfully. User ID: " . $user_id);
 

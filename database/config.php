@@ -25,6 +25,16 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+
+function encryptEmail($email, $key) {
+    $iv = openssl_random_pseudo_bytes(16);
+    $encrypted = openssl_encrypt($email, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+    $combined = $iv . $encrypted;
+    return base64_encode($combined);
+}
+
+$encryptionKey = 'SecureFeedback250';
+
 // Create SuperAdmin table if it doesn't exist
 $Super_Admin = "CREATE TABLE IF NOT EXISTS supAdmin (
     spAd_ID VARCHAR(255) PRIMARY KEY,
@@ -45,7 +55,7 @@ $sqlAdmin = "CREATE TABLE IF NOT EXISTS admin (
     image VARCHAR(255),
     status VARCHAR(50) NOT NULL
 )";
-
+/*
 $plainPassword = 'admin001';
 $hashedPassword = hash('sha3-512', $plainPassword);
 
@@ -95,7 +105,7 @@ if ($conn->query($insertQueryAdmin) === TRUE) {
 } else {
     echo "Error: " . $conn->error;
 }
-
+*/
 // Create Users table if it doesn't exist
 $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(20) PRIMARY KEY,
@@ -156,7 +166,7 @@ $sqlFeedbackReplies = "CREATE TABLE IF NOT EXISTS feedback_replies (
     FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_dD) ON DELETE CASCADE,
     FOREIGN KEY (admin_id) REFERENCES admin(admin_id) ON DELETE SET NULL
 ) ";
-
+/*
 $plainPassword = 'admin2025';
 $hashedPassword = hash('sha3-512', $plainPassword);
 
@@ -182,7 +192,7 @@ if ($conn->query($insertQuery) === TRUE) {
 } else {
     echo "Error: " . $conn->error;
 }
-
+*/
 // Execute the creation of tables in the correct order
 $tables = [
     'Super_Admin' => $Super_Admin,
@@ -202,6 +212,35 @@ foreach ($tables as $tableName => $query) {
         echo "Error creating $tableName table: " . $conn->error . "<br>";
     }
 }
+// Super Admin data
+$superAdminData = [
+    ['spAd_ID' => 'SP001', 'email' => 'ktzamora00048@usep.edu.ph', 'username' => 'superadmin', 'password' => hash('sha3-512', 'admin2025')],
+];
+
+// Admin data
+$adminData = [
+    ['admin_id' => 'AD001', 'email' => 'zkaiser546@gmail.com', 'username' => 'admin001', 'password' => hash('sha3-512', 'admin001')],
+    ['admin_id' => 'AD002', 'email' => 'tlmordaniza00427@usep.edu.ph', 'username' => 'admin002', 'password' => hash('sha3-512', 'admin002')],
+];
+
+// Insert Super Admins
+foreach ($superAdminData as $admin) {
+    $encryptedEmail = encryptEmail($admin['email'], $encryptionKey);
+    $stmt = $conn->prepare("INSERT INTO supAdmin (spAd_ID, email, username, password, status) VALUES (?, ?, ?, ?, 'Active')");
+    $stmt->bind_param("ssss", $admin['spAd_ID'], $encryptedEmail, $admin['username'], $admin['password']);
+    $stmt->execute();
+}
+
+// Insert Admins
+foreach ($adminData as $admin) {
+    $encryptedEmail = encryptEmail($admin['email'], $encryptionKey);
+    $stmt = $conn->prepare("INSERT INTO admin (admin_id, email, username, password, status) VALUES (?, ?, ?, ?, 'Active')");
+    $stmt->bind_param("ssss", $admin['admin_id'], $encryptedEmail, $admin['username'], $admin['password']);
+    $stmt->execute();
+}
+
+
+
 
 // Close the connection
 $conn->close();
