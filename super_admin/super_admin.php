@@ -62,7 +62,7 @@ $totalFeedbacks = $data['total_feedbacks'] ?? 0;
 $averageStars = $data['average_stars'] ?? 0;
 
                 // Fetch admin data along with their access control status
-$sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user, accessControl.user_control 
+$sql4 = "SELECT admin.admin_id, admin.username, accessControl.manage_user
          FROM admin 
          LEFT JOIN accessControl ON admin.admin_id = accessControl.admin_id";
          $result5 = $conn->query($sql4);
@@ -493,25 +493,48 @@ input,
           </thead>
           <tbody id="user-table-body">
             <?php
-            if ($result1->num_rows > 0) {
-              while ($row = $result1->fetch_assoc()) {
-                $fullName = htmlspecialchars($row['username']);
-                $email = htmlspecialchars($row['email']);
-                $status = htmlspecialchars($row['status']);
-                $userId = htmlspecialchars($row['user_id']);
-                echo "
-                  <tr>
-                    <td>{$userId}</td>
-                    <td>{$fullName}</td>
-                    <td>{$email}</td>
-                    <td>{$status}</td>
-                    <td><button class='text-blue-400 edit-btn' data-user-id='{$userId}'>Edit</button></td>
-                  </tr>
-                ";
-              }
-            } else {
-              echo "<tr><td colspan='5'>No users found.</td></tr>";
-            }
+           // Decryption function
+function decryptEmail($encryptedData, $key) {
+    $combined = base64_decode($encryptedData);
+    $iv = substr($combined, 0, 16);
+    $encrypted = substr($combined, 16);
+    return openssl_decrypt(
+        $encrypted,
+        'AES-256-CBC',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv
+    );
+}
+
+// Encryption key
+$encryptionKey = 'SecureFeedback250';
+
+try {
+
+    if ($result1->num_rows > 0) {
+        while ($row = $result1->fetch_assoc()) {
+            $fullName = htmlspecialchars($row['username']);
+            $email = htmlspecialchars(decryptEmail($row['email'], $encryptionKey)); // Decrypt the email
+            $status = htmlspecialchars($row['status']);
+            $userId = htmlspecialchars($row['user_id']);
+            echo "
+              <tr>
+                <td>{$userId}</td>
+                <td>{$fullName}</td>
+                <td>{$email}</td>
+                <td>{$status}</td>
+                <td><button class='text-blue-400 edit-btn' data-user-id='{$userId}'>Edit</button></td>
+              </tr>
+            ";
+        }
+    } else {
+        echo "<tr><td colspan='5'>No users found.</td></tr>";
+    }
+} catch (Exception $e) {
+    echo "<tr><td colspan='5'>Error fetching users.</td></tr>";
+}
+
             ?>
           </tbody>
         </table>
@@ -670,27 +693,38 @@ input,
             <tbody>
              <?php
 
+// Decryption function
 
-                // Loop through the results to display in the table
-                while ($row = $result6->fetch_assoc()) {
-                    echo "<tr>";
-                    echo "<td>" . $row['user_id'] . "</td>";
-                    echo "<td>" . $row['username'] . "</td>";
-                    echo "<td>" . $row['email'] . "</td>";
-                    echo "<td>
-                        <select name='access_control_".$row['user_id']."' class='form-control'>
-                            <option value='Enabled' " . ($row['manage_users'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
-                            <option value='Disabled' " . ($row['manage_users'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
-                            <option value='Blocked' " . ($row['manage_users'] === 'Blocked' ? 'selected' : '') . ">Blocked</option>
-                        </select>
-                    </td>";
-                    echo "<td>
-                        <button type='submit' class='text-blue-400 save-btn' name='save_".$row['user_id']."' data-user-id='".$row['user_id']."'>
-                            Save
-                        </button>
-                    </td>";
-                    echo "</tr>";
-                }
+// Encryption key
+$encryptionKey = 'SecureFeedback250';
+
+try {
+    // Loop through the results to display in the table
+    while ($row = $result6->fetch_assoc()) {
+        $decryptedEmail = htmlspecialchars(decryptEmail($row['email'], $encryptionKey)); // Decrypt the email
+
+        echo "<tr>";
+        echo "<td>" . htmlspecialchars($row['user_id']) . "</td>";
+        echo "<td>" . htmlspecialchars($row['username']) . "</td>";
+        echo "<td>" . $decryptedEmail . "</td>";
+        echo "<td>
+            <select name='access_control_" . htmlspecialchars($row['user_id']) . "' class='form-control'>
+                <option value='Enabled' " . ($row['manage_users'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
+                <option value='Disabled' " . ($row['manage_users'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
+                <option value='Blocked' " . ($row['manage_users'] === 'Blocked' ? 'selected' : '') . ">Blocked</option>
+            </select>
+        </td>";
+        echo "<td>
+            <button type='submit' class='text-blue-400 save-btn' name='save_" . htmlspecialchars($row['user_id']) . "' data-user-id='" . htmlspecialchars($row['user_id']) . "'>
+                Save
+            </button>
+        </td>";
+        echo "</tr>";
+    }
+} catch (Exception $e) {
+    echo "<tr><td colspan='5'>Error fetching users.</td></tr>";
+}
+
              ?>
             </tbody>
           </table>
@@ -706,7 +740,6 @@ input,
                 <th>ID</th>
                 <th>Name</th>
                 <th>Manage User</th>
-                <th>User Control</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -726,12 +759,7 @@ input,
                             
                         </select>
                     </td>";
-                     echo "<td>
-                        <select name='user_control".$row['admin_id']."' class='form-control'>
-                            <option value='Enabled' " . ($row['user_control'] === 'Enabled' ? 'selected' : '') . ">Enabled</option>
-                            <option value='Disabled' " . ($row['user_control'] === 'Disabled' ? 'selected' : '') . ">Disabled</option>
-                        </select>
-                    </td>";
+                     
                     echo "<td>
                         <button type='submit' class='text-blue-400 save-btn' name='save_".$row['admin_id']."' data-user-id='".$row['admin_id']."'>
                             Save
