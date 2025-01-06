@@ -808,9 +808,15 @@ document.getElementById("view-reports-btn").addEventListener("click", () => {
   );
 
       // Manage Users Tab
- document.addEventListener("click", async (event) => {
+      document.addEventListener("click", async (event) => {
   if (event.target.id === "manage-users-btn") {
-    // Manage Users Tab
+    // Load users table structure first
+    const contentArea = document.getElementById('content-area'); // Make sure this element exists
+    if (!contentArea) {
+      console.error('Content area element not found');
+      return;
+    }
+
     contentArea.innerHTML = `
       <div class="content-card p-8">
         <h2 class="text-3xl font-bold text-white mb-4">Manage Users</h2>
@@ -825,103 +831,183 @@ document.getElementById("view-reports-btn").addEventListener("click", () => {
             </tr>
           </thead>
           <tbody id="user-table-body">
-            <?php
-            if ($result1->num_rows > 0) {
-              while ($row = $result1->fetch_assoc()) {
-                $fullName = htmlspecialchars($row['username']);
-                $email = htmlspecialchars($row['email']);
-                $status = htmlspecialchars($row['status']);
-                $userId = htmlspecialchars($row['user_ID']);
-                echo "
-                  <tr>
-                    <td>{$userId}</td>
-                    <td>{$fullName}</td>
-                    <td>{$email}</td>
-                    <td>{$status}</td>
-                    <td><button class='text-blue-400 edit-btn' data-user-id='{$userId}'>Edit</button></td>
-                  </tr>
-                ";
-              }
-            } else {
-              echo "<tr><td colspan='5'>No users found.</td></tr>";
-            }
-            ?>
+            <!-- Data will be loaded here -->
           </tbody>
         </table>
       </div>
     `;
+
+    // Fetch and populate users data
+    try {
+      const response = await fetch('get_users.php');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const users = await response.json();
+      
+      const tableBody = document.getElementById('user-table-body');
+      if (!tableBody) {
+        console.error('Table body element not found');
+        return;
+      }
+
+      if (users.length > 0) {
+        tableBody.innerHTML = users.map(user => `
+          <tr>
+            <td>${user.user_id}</td>
+            <td>${user.username}</td>
+            <td>${user.email}</td>
+            <td>${user.status}</td>
+            <td><button class='text-blue-400 edit-btn' data-user-id='${user.user_id}'>Edit</button></td>
+          </tr>
+        `).join('');
+      } else {
+        tableBody.innerHTML = "<tr><td colspan='5'>No users found.</td></tr>";
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to load users. Please try again.",
+        });
+      } else {
+        alert("Failed to load users. Please try again.");
+      }
+    }
   }
-   // Handle Edit Button Click
+
+  // Handle Edit Button Click
   if (event.target.classList.contains("edit-btn")) {
     const userId = event.target.getAttribute("data-user-id");
+    const contentArea = document.getElementById('content-area');
+    
+    if (!userId || !contentArea) {
+      console.error('Missing required elements');
+      return;
+    }
 
-    // Fetch user details via AJAX or Fetch API
-    const response = await fetch(`getUserDetailsAdmin.php?user_ID=${userId}`);
-    const user = await response.json();
+    try {
+      const response = await fetch(`getUserDetailsAdmin.php?user_ID=${userId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const user = await response.json();
 
-    if (user) {
-      contentArea.innerHTML = `
-        <div class="content-card p-8">
-          <h2 class="text-3xl font-bold text-white mb-4">Edit User</h2>
-          <form id="edit-user-form">
-            <input type="hidden" id="edit-user-id" value="${user.user_ID}">
-            <div class="mb-4">
-              <label for="edit-username" class="block text-sm font-medium text-gray-300">Full Name</label>
-              <input type="text" id="edit-username" value="${user.username}" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <div class="mb-4">
-              <label for="edit-email" class="block text-sm font-medium text-gray-300">Email</label>
-              <input type="email" id="edit-email" value="${user.email}" class="block w-full mt-1 px-4 py-2 border rounded-md">
-            </div>
-            <div class="mb-4">
-              <label for="edit-status" class="block text-sm font-medium text-gray-300">Status</label>
-              <select id="edit-status" class="block w-full mt-1 px-4 py-2 border rounded-md">
-                <option value="Active" ${user.status === "Active" ? "selected" : ""}>Active</option>
-                <option value="Inactive" ${user.status === "Inactive" ? "selected" : ""}>Inactive</option>
-              </select>
-            </div>
-            <button type="button" id="save-user-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Changes</button>
-          </form>
-        </div>
-      `;
+      if (user && !user.error) {
+        contentArea.innerHTML = `
+          <div class="content-card p-8">
+            <h2 class="text-3xl font-bold text-white mb-4">Edit Username</h2>
+            <form id="edit-user-form">
+              <input type="hidden" id="edit-user-id" value="${user.user_id}">
+              <div class="mb-4">
+                <label for="edit-username" class="block text-sm font-medium text-gray-300">Full Name</label>
+                <input type="text" id="edit-username" value="${user.username}" class="block w-full mt-1 px-4 py-2 border rounded-md">
+              </div>
+              <div class="mb-4">
+                 <p class="text-lg font-bold text-gray-300">Email: ${user.email}</p>
+                 <p class="text-lg font-bold text-gray-300">Status: ${user.status}</p>
+              </div>
+              <button type="button" id="save-user-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Save Username</button>
+            </form>
+          </div>
+        `;
+      } else {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: user.error || "Failed to load user details.",
+          });
+        } else {
+          alert(user.error || "Failed to load user details.");
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to load user details. Please try again.",
+        });
+      } else {
+        alert("Failed to load user details. Please try again.");
+      }
     }
   }
-   if (event.target.id === "save-user-btn") {
-    const userId = document.getElementById("edit-user-id").value;
-    const username = document.getElementById("edit-username").value;
-    const email = document.getElementById("edit-email").value;
-    const status = document.getElementById("edit-status").value;
 
-    // Send updated data to the server via Fetch API
-    const response = await fetch("updateUserAdmin.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ user_ID: userId, username, email, status }),
-    });
+  if (event.target.id === "save-user-btn") {
+    const userId = document.getElementById("edit-user-id")?.value;
+    const username = document.getElementById("edit-username")?.value;
 
-    const result = await response.json();
+    if (!userId || !username) {
+      console.error('Missing required fields');
+      return;
+    }
 
-    if (result.success) {
-      Swal.fire({
-        icon: "success",
-        title: "User updated successfully!",
-        showConfirmButton: false,
-        timer: 1500,
+    try {
+      const response = await fetch("updateUserAdmin.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          user_ID: userId, 
+          username
+        }),
       });
 
-      // Reload the Manage Users tab
-      document.getElementById("manage-users-btn").click();
-    } else {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: result.message || "Failed to update user.",
-      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        if (typeof Swal !== 'undefined') {
+          await Swal.fire({
+            icon: "success",
+            title: "Success!",
+            text: result.message,
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        } else {
+          alert("Username updated successfully!");
+        }
+
+        // Reload the Manage Users tab
+        const manageUsersBtn = document.getElementById("manage-users-btn");
+        if (manageUsersBtn) {
+          manageUsersBtn.click();
+        }
+      } else {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: result.message || "Failed to update username.",
+          });
+        } else {
+          alert(result.message || "Failed to update username.");
+        }
+      }
+    } catch (error) {
+      console.error('Error updating username:', error);
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "An unexpected error occurred. Please try again.",
+        });
+      } else {
+        alert("An unexpected error occurred. Please try again.");
+      }
     }
   }
-    });
+});
   
   </script>
   <script>

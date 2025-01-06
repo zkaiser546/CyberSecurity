@@ -10,21 +10,26 @@ include "../database/dbConnect.php";
 
 // Function to generate user ID with prefix
 function generateUserId($conn) {
-    $date = date('Ymd'); // Format: YYYYMMDD
+    $date = date('Ymd'); 
     
-    // Get the last user ID for today
-    $sql = "SELECT user_id FROM users WHERE user_id LIKE 'USER" . $date . "%' ORDER BY user_id DESC LIMIT 1";
+    // Get the last user ID from the entire table, not just today
+    $sql = "SELECT user_id FROM users ORDER BY user_id DESC LIMIT 1";
     $result = $conn->query($sql);
     
     if ($result && $result->num_rows > 0) {
         $lastId = $result->fetch_assoc()['user_id'];
-        // Extract the sequence number and increment
+        
         $sequence = intval(substr($lastId, -4)) + 1;
+        
+        
+        if ($sequence > 9999) {
+            $sequence = 1; 
+        }
     } else {
-        $sequence = 1; // Start with 1 if no records for today
+        $sequence = 1; 
     }
     
-    // Format: USER + YYYYMMDD + 4-digit sequence
+    
     return 'USER' . $date . str_pad($sequence, 4, '0', STR_PAD_LEFT);
 }
 

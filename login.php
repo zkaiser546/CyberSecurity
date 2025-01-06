@@ -84,34 +84,39 @@
     }
     // Add this JavaScript to handle the form submission
     document.getElementById('login-form').addEventListener('submit', function(e) {
-      e.preventDefault();
+    e.preventDefault();
+    const formData = new FormData(this);
 
-      const formData = new FormData(this);
-
-      fetch('users_login.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
+    fetch('users_login.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
             window.location.href = data.redirect;
-          } else {
+        } else {
             Swal.fire({
-              icon: 'error',
-              title: 'Login Failed',
-              text: data.message
+                icon: 'error',
+                title: 'Login Failed',
+                text: data.message || 'Login failed. Please try again.'
             });
-          }
-        })
-        .catch(error => {
-          Swal.fire({
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error); 
+        Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'An unexpected error occurred. Please try again.'
-          });
+            text: 'Server error: ' + error.message
         });
     });
+});
   </script>
 </body>
 
